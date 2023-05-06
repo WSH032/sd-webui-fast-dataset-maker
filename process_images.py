@@ -41,7 +41,7 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
         for s in indeed_duplicates_set:
             for m in cluster_list:
                 if s & m:
-                    m.union(s)
+                    m.update(s)
                     break
             else:
                 cluster_list.append(s)
@@ -159,7 +159,6 @@ def auto_select() -> str:
     phasher = PHash()
     # 启发式算法获得待删除的列表，里面包含了图片名字字符串
     auto_duplicates_list = phasher.find_duplicates_to_remove(encoding_map=encodings)
-    
 
     # 定义一个空字典来存储映射关系
     mapping = {}
