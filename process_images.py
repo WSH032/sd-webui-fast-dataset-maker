@@ -23,11 +23,13 @@ choose_image_index = ""
 encodings = {}
 cluster_list = []
 confirmed_images_dir = ""
+images_info_list = []
 
 def find_duplicates_images(images_dir: str, use_cache:bool):
     
-    global confirmed_images_dir, cluster_list
+    global confirmed_images_dir, cluster_list, images_info_list
     
+    # 全局变量
     confirmed_images_dir = images_dir
     
     def cluster_duplicates(images_dir: str) -> list:
@@ -55,6 +57,7 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
         cluster_list = [ list(s) for s in cluster_list] 
         return cluster_list
     
+    # 全局变量
     cluster_list = cluster_duplicates(images_dir)
     
 
@@ -76,6 +79,8 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
     
     def cluster_to_gallery(images_dir: str, cluster_list: list) -> list:
     # 将图片的绝对路径和索引合成一个元组，最后把全部元组放入一个列表，向gradio.gallery传递
+    
+        # 合成元组列表
         images_tuple_list = []
         parent_index = 0
         for parent in cluster_list:
@@ -84,6 +89,7 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
                 images_tuple_list.append( (os.path.join(images_dir, son), f"{parent_index}:{son_index}") )
                 son_index += 1
             parent_index += 1
+        
         return images_tuple_list
     
     # 如果使用缓存就缓存图像
@@ -93,6 +99,27 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
     # 如果用缓存就展示缓存图
     gallery_images_dir = images_dir if not use_cache else os.path.join( images_dir, "cache" )
     images_tuple_list = cluster_to_gallery( gallery_images_dir, cluster_list)
+    
+    def get_images_info(images_dir: str, cluster_list: list) -> list:
+        # 获取图片的信息成一个字典，放入列表中
+        
+        images_info_list = []
+        for cluster in cluster_list:
+            for image_name in cluster:
+                image_path = os.path.join(images_dir, image_name)
+                with Image.open( image_path ) as im:
+                    size_MB = round( os.path.getsize(image_path)/1024/1024, 2 )
+                    image_info_dict = {"resolution(l,w)":im.size,
+                                       "size":f"{size_MB} MB",
+                                       "format":im.format,
+                                       "filename":im.filename                  
+                    }
+                    images_info_list.append(image_info_dict)
+
+        return images_info_list
+    
+    # 全局变量
+    images_info_list = get_images_info(images_dir, cluster_list)
     
     # 根据聚类数,生成如下字典
     """
@@ -213,9 +240,12 @@ def auto_select() -> str:
 
 def get_choose_image_index(evt: gr.SelectData):
     # evt.value 为标签 ；evt.index 为图片序号； evt.target 为调用组件名
-    global choose_image_index
+    global choose_image_index, images_info_list 
+    
     choose_image_index = evt.value
-    return f"选择 {evt.value}", f"取消 {evt.value}"
+    image_info_json = images_info_list[evt.index]
+    
+    return f"选择 {evt.value}", f"取消 {evt.value}", image_info_json
 
 
 with gr.Blocks(css="#delet_button {color: red}") as demo:
@@ -232,6 +262,8 @@ with gr.Blocks(css="#delet_button {color: red}") as demo:
             with gr.Row():
                 confirm_button = gr.Button("选择图片")
                 cancel_button = gr.Button("取消图片")
+            with gr.Row():
+                image_info_json = gr.JSON()
         with gr.Column(scale=1):
             delet_button = gr.Button("删除（不可逆）", elem_id="delet_button")
             auto_select_button = gr.Button("自动选择")
@@ -243,10 +275,10 @@ with gr.Blocks(css="#delet_button {color: red}") as demo:
                                         outputs=[duplicates_images_gallery, delet_images_str]
                                         )
 
-    # 点击一个图片后，记录该图片标签于全局变量choose_image_index，并且把按钮更名为该标签
+    # 点击一个图片后，记录该图片标签于全局变量choose_image_index，并且把按钮更名为该标签;同时显示该图片分辨率等信息
     duplicates_images_gallery.select(fn=get_choose_image_index,
                                      inputs=[],
-                                     outputs=[confirm_button, cancel_button]
+                                     outputs=[confirm_button, cancel_button, image_info_json]
                                      )
 
     # 按下后，将全局变量choose_image_index中的值加到列表中
