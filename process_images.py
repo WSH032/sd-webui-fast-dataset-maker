@@ -12,20 +12,26 @@ Created on Fri May  5 17:38:31 2023
 IMAGE_EXTENSION = ('.jpg', '.png', '.jpeg', '.bmp')
 
 import gradio as gr
-
+from imagededup.methods import PHash
+import toml
+import bisect
+import os
+from tqdm import tqdm
+from PIL import Image
 
 choose_image_index = ""
+encodings = {}
 cluster_list = []
-
+confirmed_images_dir = ""
 
 def find_duplicates_images(images_dir: str, use_cache:bool):
-
-    import os
+    
+    global confirmed_images_dir, cluster_list
+    
+    confirmed_images_dir = images_dir
     
     def cluster_duplicates(images_dir: str) -> list:
         """ 返回该目录下重复图像聚类，为一个集合列表，每个集合内为重复图像名字（不包含路径） """
-        
-        from imagededup.methods import PHash
         
         # 载入模型
         phasher = PHash()
@@ -45,9 +51,9 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
                     break
             else:
                 cluster_list.append(s)
+        # 把内部的集合改为列表，让其有序
+        cluster_list = [ list(s) for s in cluster_list] 
         return cluster_list
-
-    global cluster_list
     
     cluster_list = cluster_duplicates(images_dir)
     
@@ -55,17 +61,17 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
     def cache_image( input_dir: str, cluster_list: list, resolution: int=512 ):
         """ 如果使用缓存，就调用pillow，将重复的图片缓存到同路径下的一个cache文件夹中，分辨率最大为512,与前面图片名字一一对应 """
         
-        from PIL import Image
-        
         # 建一个文件夹
         cache_dir = os.path.join(input_dir, "cache")
         os.makedirs(cache_dir, exist_ok=True)
         
-        for cluster in cluster_list:
+        print("缓存缩略图中，caching...")
+        for cluster in tqdm(cluster_list):
             for image_name in cluster:
                 with Image.open( os.path.join( input_dir, image_name ) ) as im:
                     im.thumbnail( (resolution, resolution) )
                     im.save( os.path.join(cache_dir, image_name) )
+        print(f"缓存完成: {cache_dir}\nDone!")
                     
     
     def cluster_to_gallery(images_dir: str, cluster_list: list) -> list:
@@ -104,8 +110,6 @@ def find_duplicates_images(images_dir: str, use_cache:bool):
 
 def confirm(delet_images_str: str) -> str:
 
-    import bisect
-    import toml
     # 将字符串载入成字典
     delet_images_dict = toml.loads(delet_images_str)
     # 把删除标志如 "0:1" 分成 "0" 和 "1"
@@ -128,7 +132,7 @@ def confirm(delet_images_str: str) -> str:
 
 
 def cancel(delet_images_str: str) -> str:
-    import toml
+    
     # 将字符串载入成字典
     delet_images_dict = toml.loads(delet_images_str)
     # 把删除标志如 "0:1" 分成 "0" 和 "1"
@@ -143,12 +147,38 @@ def cancel(delet_images_str: str) -> str:
                 delet_images_dict.pop(parent_index_str, None)
     return toml.dumps(delet_images_dict)
 
+def delet(delet_images_str: str):
+    
+    """ 
+    output=[duplicates_images_gallery, delet_images_str] """
+    
+    global confirmed_images_dir, cluster_list
+    
+    #如果还没查找过重复图片就什么都不做
+    if (confirmed_images_dir is None or not confirmed_images_dir) or (cluster_list is None or not cluster_list):
+        return [], ""
+    
+    #读取待删除列表
+    delet_images_dict = toml.loads(delet_images_str)
+    
+    #获取待删除图片名字
+    need_delet_images_name_list = []
+    for parent_index, son_index_list in delet_images_dict.items():
+        need_delet_images_name_list.extend( [ cluster_list[int(parent_index)][i] for i in son_index_list ] )
+    
+    print("删除图片中deleting...")
+    for f in tqdm(need_delet_images_name_list):
+        try:
+            os.remove( os.path.join(confirmed_images_dir,f) )
+        except Exception as e:
+            print( f"删除 {f} 时遭遇错误： {e}" )
+    print("删除完成 Done!")
+    
+    #重置状态，阻止使用自动选择，除非再扫描一次
+    cluster_list = None
+    return [], ""
 
 def auto_select() -> str:
-    
-    from imagededup.methods import PHash
-    import toml
-    import bisect
     
     global encodings, cluster_list
     
@@ -230,6 +260,12 @@ with gr.Blocks(css="#delet_button {color: red}") as demo:
                         inputs=[delet_images_str],
                         outputs=[delet_images_str]
                         )
+    
+    # 按下后，删除指定的图像，并更新画廊
+    delet_button.click(fn=delet,
+                       inputs=[delet_images_str],
+                       outputs=[duplicates_images_gallery, delet_images_str]
+                       )
     
     # 按下后，用启发式算法自动找出建议删除的重复项
     auto_select_button.click(fn=auto_select,
