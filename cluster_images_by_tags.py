@@ -118,11 +118,18 @@ tags_list = read_tags_list(images_dir, tags_files_list)
 # 去逗号
 # tags_list = [ t.replace(" ", "_").replace(",", " " ) for t in tags_list ] 
 
+def comma_tokenizer(text):
+    # 定义一个以逗号为分隔符的分词器函数，并对每个标签进行去空格操作
+    return [tag.strip() for tag in text.split(',')]
+
 # 提取标签特征
-#tfvec = skt.CountVectorizer()
-tfvec = skt.TfidfVectorizer()
+# tfvec = skt.CountVectorizer()
+# tfvec = skt.TfidfVectorizer(tokenizer=comma_tokenizer, binary=True) # 创建TfidfVectorizer对象，并指定分词器
+# tfvec = skt.TfidfVectorizer(tokenizer=comma_tokenizer) # 创建TfidfVectorizer对象，并指定分词器
+tfvec = skt.TfidfVectorizer() 
 X = tfvec.fit_transform(tags_list).toarray()
 tf_tags_list = tfvec.get_feature_names()
+
 
 # 使用肘部法则确定最优的聚类数
 wss = [] # 存储每个聚类数对应的簇内平方和
@@ -184,7 +191,7 @@ with gr.Blocks() as demo:
         images_tuple_list.append( (os.path.join(images_dir, name), f"{name}") )
     gr.Gallery( label="聚类图片", value=images_tuple_list ).style(grid=[6], height="auto", preview=False)
 
-demo.launch(debug=True, inbrowser=True)
+# demo.launch(debug=True, inbrowser=True)
 
 """
 for name in type1:
