@@ -142,14 +142,19 @@ def cluster_analyse(images_dir: str, max_cluster_number: int):
         kmeans_model = skc.KMeans(n_clusters=k) # 创建K-Means模型
         y_pred = kmeans_model.fit_predict(X) # 训练模型
         wss.append(kmeans_model.inertia_) # 计算并存储簇内平方和
-        score = silhouette_score(X, y_pred) if k != 1 else 0 # 计算轮廓系数,聚类数为1时无法计算
+        score = silhouette_score(X, y_pred) if k != 1 else None  # 计算轮廓系数,聚类数为1时无法计算
         silhouette_scores.append(score) # 储存轮廓系数
     
-    Elbow_DataFrame = pd.DataFrame( {"x":k_range, "y":wss} )
     Silhouette_DataFrame = pd.DataFrame( {"x":k_range, "y":silhouette_scores} )
+    Elbow_DataFrame = pd.DataFrame( {"x":k_range, "y":wss} )
+    
+    final_clusters_number = len( np.unique(y_pred) )  # 实际最大聚类数
+    head_number = max( 1, min( 5, round(final_clusters_number*0.2) ) )  # 展示实际聚类数*0.2个，最少要展示1个，最多展示5个
+    # 对轮廓系数从大到小排序，展示前head_number个
+    bset_cluster_number_DataFrame = Silhouette_DataFrame.sort_values(by='y', ascending=False).head(head_number)
     
     # 绘制肘部曲线
-    return Silhouette_DataFrame, Elbow_DataFrame
+    return Silhouette_DataFrame, Elbow_DataFrame, gr.update(value=bset_cluster_number_DataFrame,visible=True)
 
 
 def create_gr_gallery(max_gallery_number: int) -> list:
@@ -204,6 +209,11 @@ with gr.Blocks() as demo:
                                             overlay_point=True,
                                             width=400,
                 )
+            with gr.Row():
+                bset_cluster_number_DataFrame = gr.DataFrame(value=[],
+                                                             label="根据轮廓曲线推荐的聚类数（y越大越好）",
+                                                             visible=False
+                )
     with gr.Row():
         with gr.Accordion("聚类图片展示", open=True):
             gr_Accordion_and_Gallery_list = create_gr_gallery(MAX_GALLERY_NUMBER)
@@ -215,7 +225,7 @@ with gr.Blocks() as demo:
             
     cluster_analyse_button.click(fn=cluster_analyse,
                                  inputs=[images_dir, max_cluster_number],
-                                 outputs=[Elbow_gr_Plot, Silhouette_gr_Plot]
+                                 outputs=[Silhouette_gr_Plot, Elbow_gr_Plot, bset_cluster_number_DataFrame]
     )
     
 demo.launch(inbrowser=True,debug=True)
