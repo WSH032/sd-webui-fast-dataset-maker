@@ -18,7 +18,7 @@ from cluster_images_by_tags import read_tags
 from tqdm import tqdm
 from PIL import Image
 from typing import Callable, List
-
+import pandas as pd
 
 MAX_GALLERY_NUMBER = 100  # 画廊里展示的最大聚类数量为100
 
@@ -145,21 +145,11 @@ def cluster_analyse(images_dir: str, max_cluster_number: int):
         score = silhouette_score(X, y_pred) if k != 1 else 0 # 计算轮廓系数,聚类数为1时无法计算
         silhouette_scores.append(score) # 储存轮廓系数
     
+    Elbow_DataFrame = pd.DataFrame( {"x":k_range, "y":wss} )
+    Silhouette_DataFrame = pd.DataFrame( {"x":k_range, "y":silhouette_scores} )
+    
     # 绘制肘部曲线
-    Elbow_gr_Plot = plt.figure()
-    plt.plot(k_range, wss, "o-")
-    plt.xlabel("Number of clusters")
-    plt.ylabel("Within-cluster sum of squares")
-    plt.title("Elbow Method")
-
-    # 绘制轮廓系数曲线
-    Silhouette_gr_Plot = plt.figure()
-    plt.plot(k_range, silhouette_scores, "o-")
-    plt.xlabel("Number of clusters")
-    plt.ylabel("Silhouette score")
-    plt.title("Silhouette Method")
-
-    return Elbow_gr_Plot, Silhouette_gr_Plot
+    return Silhouette_DataFrame, Elbow_DataFrame
 
 
 def create_gr_gallery(max_gallery_number: int) -> list:
@@ -189,13 +179,31 @@ with gr.Blocks() as demo:
             confirmed_cluster_number = gr.Slider(2, 100, step=1, value=2, label="聚类数")
             cluster_images_button = gr.Button("开始聚类")
     with gr.Row():
-        with gr.Accordion("聚类效果分析", open=False):
+        with gr.Accordion("聚类效果分析", open=True):
             with gr.Row():
                 max_cluster_number = gr.Slider(2, 100, step=1, value=10, label="最大聚类数")
                 cluster_analyse_button = gr.Button("开始分析")
             with gr.Row():
-                Elbow_gr_Plot = gr.Plot(label="肘部曲线（选择拐点）")
-                Silhouette_gr_Plot = gr.Plot(label="轮廓系数（越大越好）")
+                Silhouette_gr_Plot = gr.LinePlot(label="轮廓系数",
+                                                 x="x",
+                                                 y="y",
+                                                 tooltip=["x", "y"],
+                                                 x_title="Number of clusters",
+                                                 y_title="Silhouette score",
+                                                 title="Silhouette Method",
+                                                 overlay_point=True,
+                                                 width=400,
+                )
+                Elbow_gr_Plot = gr.LinePlot(label="肘部曲线",
+                                            x="x",
+                                            y="y",
+                                            tooltip=["x", "y"],
+                                            x_title="Number of clusters",
+                                            y_title="Within-cluster sum of squares",
+                                            title="Elbow Method",
+                                            overlay_point=True,
+                                            width=400,
+                )
     with gr.Row():
         with gr.Accordion("聚类图片展示", open=True):
             gr_Accordion_and_Gallery_list = create_gr_gallery(MAX_GALLERY_NUMBER)
