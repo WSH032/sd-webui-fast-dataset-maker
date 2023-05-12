@@ -101,7 +101,7 @@ def read_tags(images_dir: str) -> tuple :
     返回一个元组，其中的元素也为元组，子元组第一个元素为图片名，第二个元素为其对应的tags
     """
     # 获取该目录下所有的图片文件名
-    images_files_list = [ f for f in os.listdir(images_dir) if os.path.isfile(os.path.join(images_dir, f)) and f.endswith(IMAGE_EXTENSION) ]
+    images_files_list = [ f for f in os.listdir(images_dir) if os.path.isfile(os.path.join(images_dir, f)) and f.lower().endswith(IMAGE_EXTENSION) ]
     
     def ext_to_txt(ori_list: list) -> list:
         #将一个列表内扩展名全部换成.txt

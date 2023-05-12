@@ -19,10 +19,14 @@ from tqdm import tqdm
 from PIL import Image
 from typing import Callable, List
 import pandas as pd
+from datetime import datetime
+import shutil
+import math
 # from kneed import KneeLocator
 
+
 MAX_GALLERY_NUMBER = 100  # 画廊里展示的最大聚类数量为100
-CACHE_RESOLUTION = 512  # 缓存图片时最大分辨率
+CACHE_RESOLUTION = 256  # 缓存图片时最大分辨率
 
 
 # 逗号分词器
@@ -51,7 +55,7 @@ def create_Vectorizer(tokenizer: Callable[ [str], List[str] ]=None,
     return tfvec
 
 
-def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bool) -> list:
+def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bool, global_dict_State: dict) -> list:
     """
     对指定目录下的图片进行聚类，将会使用该目录下与图片同名的txt中的tag做为特征
     confirmed_cluster_number为指定的聚类数
@@ -78,6 +82,10 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
     clusters_ID = np.unique(y_pred)
     clustered_images_list = [np.compress(np.equal(y_pred, i), images_files_list).tolist() for i in clusters_ID]
     
+    # 赋值到全局组件中，将会传递至confirm_cluster_button.click
+    global_dict_State["clustered_images_list"] = clustered_images_list
+    global_dict_State["images_dir"] = images_dir
+    
     def cache_image(input_dir: str, cluster_list: list, resolution: int=512 ):
         """ 如果使用缓存，就调用pillow，将重复的图片缓存到同路径下的一个cache文件夹中，分辨率最大为resolution,与前面图片名字一一对应 """
         
@@ -89,7 +97,7 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
         for cluster in tqdm(cluster_list):
             for image_name in cluster:
                 # 已经存在同名缓存文件，就不缓存了
-                if not os.path.join(cache_dir, image_name):
+                if not os.path.exists( os.path.join(cache_dir, image_name) ):
                     try:
                         with Image.open( os.path.join( input_dir, image_name ) ) as im:
                             im.thumbnail( (resolution, resolution) )
@@ -113,7 +121,7 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
         
     unvisible_gr_gallery_list = [ gr.update( visible=False ) for i in range( 2*( MAX_GALLERY_NUMBER-len(clustered_images_list) ) ) ]
     
-    return visible_gr_gallery_list + unvisible_gr_gallery_list + [gr.update(visible=True)]
+    return visible_gr_gallery_list + unvisible_gr_gallery_list + [gr.update(visible=True)] + [global_dict_State]
 
 
 def cluster_analyse(images_dir: str, max_cluster_number: int):
@@ -140,7 +148,9 @@ def cluster_analyse(images_dir: str, max_cluster_number: int):
     
     # 最大聚类数不能超过样本
     k_range = range( 1, min(max_cluster_number+1, len(tags_list)+1) ) # 聚类数的范围(左闭右开)
-    for k in k_range:
+    
+    print("聚类分析开始")
+    for k in tqdm(k_range):
         kmeans_model = skc.KMeans(n_clusters=k) # 创建K-Means模型
         y_pred = kmeans_model.fit_predict(X) # 训练模型
         wss.append(kmeans_model.inertia_) # 计算并存储簇内平方和
@@ -151,7 +161,7 @@ def cluster_analyse(images_dir: str, max_cluster_number: int):
     Elbow_DataFrame = pd.DataFrame( {"x":k_range, "y":wss} )
     
     final_clusters_number = len( np.unique(y_pred) )  # 实际最大聚类数
-    head_number = max( 1, min( 5, round(final_clusters_number*0.2) ) )  # 展示实际聚类数*0.2个，最少要展示1个，最多展示5个
+    head_number = max( 1, min( 10, round( math.log2(final_clusters_number) ) ) )  # 展示log2(实际聚类数)个，最少要展示1个，最多展示10个
     # 对轮廓系数从大到小排序，展示前head_number个
     bset_cluster_number_DataFrame = Silhouette_DataFrame.sort_values(by='y', ascending=False).head(head_number)
     
@@ -161,6 +171,8 @@ def cluster_analyse(images_dir: str, max_cluster_number: int):
     kl.plot_knee()
     print( round(kl.elbow, 3) )
     """
+    
+    print("聚类分析结束")
     
     # 绘制肘部曲线
     return Silhouette_DataFrame, Elbow_DataFrame, gr.update(value=bset_cluster_number_DataFrame,visible=True)
@@ -178,7 +190,126 @@ def create_gr_gallery(max_gallery_number: int) -> list:
             gr_Accordion_and_Gallery_list.extend( [ Gallery_Accordion, gr.Gallery(value=[]).style(grid=[6], height="auto") ] )
     return gr_Accordion_and_Gallery_list
 
+
+def confirm_cluster(process_clusters_method:int, global_dict_State: dict):
+    """
+    根据选择的图片处理方式，对global_dict_State中聚类后的图片列表，以及路径进行相关操作
+    
+    
+    process_clusters_method = gr.Radio(label="图片处理方式",
+                                       choices=["重命名原图片","在Cluster文件夹下生成聚类副本","移动原图至Cluster文件夹"],
+                                       type="index",
+    )
+    
+    global_dict_State["clustered_images_list"] = clustered_images_list
+    global_dict_State["images_dir"] = images_dir
+    
+    """
+    
+    images_dir = global_dict_State.get("images_dir", "")
+    clustered_images_list = global_dict_State.get("clustered_images_list", [] )
+    
+    
+    def change_ext_to_txt(path: str) -> str:
+        # 将一个路径或者文件的扩展名改成.txt
+        path_and_name, ext = os.path.splitext(path)
+        new_path = path_and_name + ".txt"
+        return new_path
+    def change_name_with_ext(path: str, new_name: str) -> str:
+        # 保留一个路径或者文件的扩展名，更改其文件名
+        path_and_name, ext = os.path.splitext(path)
+        new_path = os.path.join( os.path.dirname(path_and_name), new_name+ext )
+        return new_path
+    
+    # 获取当前时间
+    time_now = datetime.now().strftime('%Y%m%d%H%M%S')
+    
+    
+    def rename_images(images_dir: str, clustered_images_list: list):
+        """ 依据clustered_images_list中聚类情况，对images_dir下图片以及同名txt文件重命名 """
+
+        print("重命名原图中，renaming...")
+        for cluster_index, cluster in tqdm( enumerate(clustered_images_list) ):
+            # 重命名
+            for image_index, image_name in enumerate(cluster):
+                # 重命名图片
+                new_image_name = change_name_with_ext(image_name, f"cluster{cluster_index}-{image_index:06d}-{time_now}")
+                try:
+                    os.rename( os.path.join(images_dir, image_name), os.path.join(images_dir, new_image_name) )
+                except Exception as e:
+                    print(f"重命名 {image_name} 失败, error: {e}")
+                # 重命名txt
+                txt_name = change_ext_to_txt(image_name)
+                new_txt_name = change_name_with_ext(txt_name, f"cluster{cluster_index}-{image_index:06d}-{time_now}")
+                try:
+                    os.rename( os.path.join(images_dir, txt_name), os.path.join(images_dir, new_txt_name) )
+                except Exception as e:
+                    print(f"重命名 {txt_name} 失败, error: {e}")
+        print("重命名完成  Done!")
+        
+    if process_clusters_method == 0:
+        rename_images(images_dir, clustered_images_list)
+    
+    def copy_or_move_images(images_dir: str, clustered_images_list: list, move=False):
+        """
+        依据clustered_images_list中聚类情况，将images_dir下图片以及同名txt拷贝或移动至Cluster文件夹
+        move=True时为移动
+        """
+        
+        Cluster_folder_dir = os.path.join(images_dir, f"Cluster-{time_now}")
+        
+        process_func = shutil.move if move else shutil.copy2
+        
+        # 清空聚类文件夹
+        if os.path.exists(Cluster_folder_dir):
+            shutil.rmtree(Cluster_folder_dir)
+        os.makedirs(Cluster_folder_dir, exist_ok=True)
+        
+        print("拷贝聚类中，coping...")
+        for cluster_index, cluster in tqdm( enumerate(clustered_images_list) ):
+            Cluster_son_folder_dir = os.path.join(Cluster_folder_dir, f"cluster-{cluster_index}")
+            os.makedirs(Cluster_son_folder_dir, exist_ok=True)
+            
+            # 拷贝
+            for image_name in cluster:
+                # 拷贝或移动图片
+                try:
+                    process_func( os.path.join(images_dir, image_name), os.path.join(Cluster_son_folder_dir, image_name) )
+                except Exception as e:
+                    print(f"拷贝或移动 {image_name} 失败, error: {e}")
+                # 拷贝或移动txtx
+                txt_name = change_ext_to_txt(image_name)
+                try:
+                    process_func( os.path.join(images_dir, txt_name), os.path.join(Cluster_son_folder_dir, txt_name) )
+                except Exception as e:
+                    print(f"拷贝或移动 {txt_name} 失败, error: {e}")
+        print(f"拷贝或移动完成: {Cluster_folder_dir}\nDone!")
+        
+    if process_clusters_method == 1:
+        copy_or_move_images(images_dir, clustered_images_list, move=False)
+    if process_clusters_method == 2:
+        copy_or_move_images(images_dir, clustered_images_list, move=True)
+    
+    return gr.update(visible=False)
+    
+
+
+
+##############################################################################################################################################
+##############################################################################################################################################
+##############################################################################################################################################
+
+
+
 with gr.Blocks() as demo:
+    
+    global_dict_State = gr.State(value={})  # 这个将会起到全局变量的作用，类似于globals()
+    """
+    全局列表
+    global_dict_State["clustered_images_list"] = clustered_images_list
+    global_dict_State["images_dir"] = images_dir
+    """
+    
     with gr.Box():
         with gr.Row():
             with gr.Column(scale=10):
@@ -188,11 +319,11 @@ with gr.Blocks() as demo:
                 tags_dir = gr.Textbox(label="tags目录（留空则采用图片目录）")
             """
             with gr.Column(scale=1):
-                use_cache = gr.Checkbox(label="使用缓存",info="注意，如果图片目录下的cache文件夹内存在同名图片，则不会重新缓存(可能会照成图片显示不一致)")
+                use_cache = gr.Checkbox(label="使用缓存",info="如果cache目录内存在同名图片，则不会重新缓存(可能会造成图片显示不一致)")
         with gr.Row():
             with gr.Accordion("聚类效果分析", open=True):
                 with gr.Row():
-                    max_cluster_number = gr.Slider(2, 100, step=1, value=10, label="分析时最大聚类数")
+                    max_cluster_number = gr.Slider(2, MAX_GALLERY_NUMBER, step=1, value=10, label="分析时最大聚类数")
                     cluster_analyse_button = gr.Button("开始分析")
                 with gr.Row():
                     Silhouette_gr_Plot = gr.LinePlot(label="轮廓系数",
@@ -222,23 +353,33 @@ with gr.Blocks() as demo:
                     )
     with gr.Box():
         with gr.Row():
-            confirmed_cluster_number = gr.Slider(2, 100, step=1, value=2, label="聚类数")
+            confirmed_cluster_number = gr.Slider(2, MAX_GALLERY_NUMBER, step=1, value=2, label="聚类数")
             cluster_images_button = gr.Button("开始聚类并展示结果")
     with gr.Row():
         with gr.Accordion("聚类图片展示", open=True):
             with gr.Row(visible=False) as confirm_cluster_Row:
-                process_clusters_method = gr.Radio(label="图片处理方式", choices=["重命名图片","在Cluster文件夹下生成聚类副本","移动原图至Cluster文件夹"])
+                process_clusters_method_choices = ["重命名原图片(不推荐)","在Cluster文件夹下生成聚类副本(推荐)","移动原图至Cluster文件夹(大数据集推荐)"]
+                process_clusters_method = gr.Radio(label="图片处理方式",
+                                                   value=process_clusters_method_choices[1],
+                                                   choices=process_clusters_method_choices,
+                                                   type="index",
+                )
                 confirm_cluster_button = gr.Button(value="确认聚类", elem_classes="attention", variant="primary")
             gr_Accordion_and_Gallery_list = create_gr_gallery(MAX_GALLERY_NUMBER)
             
     cluster_images_button.click(fn=cluster_images,
-                                inputs=[images_dir, confirmed_cluster_number, use_cache],
-                                outputs=gr_Accordion_and_Gallery_list + [confirm_cluster_Row]
+                                inputs=[images_dir, confirmed_cluster_number, use_cache, global_dict_State],
+                                outputs=gr_Accordion_and_Gallery_list + [confirm_cluster_Row] + [global_dict_State]
     )
 
     cluster_analyse_button.click(fn=cluster_analyse,
                                  inputs=[images_dir, max_cluster_number],
                                  outputs=[Silhouette_gr_Plot, Elbow_gr_Plot, bset_cluster_number_DataFrame]
+    )
+    
+    confirm_cluster_button.click(fn=confirm_cluster,
+                                 inputs=[process_clusters_method, global_dict_State],
+                                 outputs=[confirm_cluster_Row],
     )
     
 demo.launch(inbrowser=True,debug=True)
