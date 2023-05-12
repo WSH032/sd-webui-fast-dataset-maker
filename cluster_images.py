@@ -19,8 +19,10 @@ from tqdm import tqdm
 from PIL import Image
 from typing import Callable, List
 import pandas as pd
+# from kneed import KneeLocator
 
 MAX_GALLERY_NUMBER = 100  # 画廊里展示的最大聚类数量为100
+CACHE_RESOLUTION = 512  # 缓存图片时最大分辨率
 
 
 # 逗号分词器
@@ -97,7 +99,7 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
         print(f"缓存完成: {cache_dir}\nDone!")
         
     if use_cache:
-        cache_image(images_dir, clustered_images_list, resolution=512)
+        cache_image(images_dir, clustered_images_list, resolution=CACHE_RESOLUTION)
      
     # 如果用缓存就展示缓存图
     gallery_images_dir = images_dir if not use_cache else os.path.join( images_dir, "cache" )
@@ -111,7 +113,7 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
         
     unvisible_gr_gallery_list = [ gr.update( visible=False ) for i in range( 2*( MAX_GALLERY_NUMBER-len(clustered_images_list) ) ) ]
     
-    return visible_gr_gallery_list + unvisible_gr_gallery_list
+    return visible_gr_gallery_list + unvisible_gr_gallery_list + [gr.update(visible=True)]
 
 
 def cluster_analyse(images_dir: str, max_cluster_number: int):
@@ -153,6 +155,13 @@ def cluster_analyse(images_dir: str, max_cluster_number: int):
     # 对轮廓系数从大到小排序，展示前head_number个
     bset_cluster_number_DataFrame = Silhouette_DataFrame.sort_values(by='y', ascending=False).head(head_number)
     
+    """
+    自动找拐点，在聚类数大了后效果不好
+    kl = KneeLocator(k_range, wss, curve="convex", direction="decreasing")
+    kl.plot_knee()
+    print( round(kl.elbow, 3) )
+    """
+    
     # 绘制肘部曲线
     return Silhouette_DataFrame, Elbow_DataFrame, gr.update(value=bset_cluster_number_DataFrame,visible=True)
 
@@ -181,48 +190,52 @@ with gr.Blocks() as demo:
             with gr.Column(scale=1):
                 use_cache = gr.Checkbox(label="使用缓存",info="注意，如果图片目录下的cache文件夹内存在同名图片，则不会重新缓存(可能会照成图片显示不一致)")
         with gr.Row():
+            with gr.Accordion("聚类效果分析", open=True):
+                with gr.Row():
+                    max_cluster_number = gr.Slider(2, 100, step=1, value=10, label="分析时最大聚类数")
+                    cluster_analyse_button = gr.Button("开始分析")
+                with gr.Row():
+                    Silhouette_gr_Plot = gr.LinePlot(label="轮廓系数",
+                                                     x="x",
+                                                     y="y",
+                                                     tooltip=["x", "y"],
+                                                     x_title="Number of clusters",
+                                                     y_title="Silhouette score",
+                                                     title="Silhouette Method",
+                                                     overlay_point=True,
+                                                     width=400,
+                    )
+                    Elbow_gr_Plot = gr.LinePlot(label="肘部曲线",
+                                                x="x",
+                                                y="y",
+                                                tooltip=["x", "y"],
+                                                x_title="Number of clusters",
+                                                y_title="Within-cluster sum of squares",
+                                                title="Elbow Method",
+                                                overlay_point=True,
+                                                width=400,
+                    )
+                with gr.Row():
+                    bset_cluster_number_DataFrame = gr.DataFrame(value=[],
+                                                                 label="根据轮廓曲线推荐的聚类数（y越大越好）",
+                                                                 visible=False
+                    )
+    with gr.Box():
+        with gr.Row():
             confirmed_cluster_number = gr.Slider(2, 100, step=1, value=2, label="聚类数")
-            cluster_images_button = gr.Button("开始聚类")
-    with gr.Row():
-        with gr.Accordion("聚类效果分析", open=True):
-            with gr.Row():
-                max_cluster_number = gr.Slider(2, 100, step=1, value=10, label="最大聚类数")
-                cluster_analyse_button = gr.Button("开始分析")
-            with gr.Row():
-                Silhouette_gr_Plot = gr.LinePlot(label="轮廓系数",
-                                                 x="x",
-                                                 y="y",
-                                                 tooltip=["x", "y"],
-                                                 x_title="Number of clusters",
-                                                 y_title="Silhouette score",
-                                                 title="Silhouette Method",
-                                                 overlay_point=True,
-                                                 width=400,
-                )
-                Elbow_gr_Plot = gr.LinePlot(label="肘部曲线",
-                                            x="x",
-                                            y="y",
-                                            tooltip=["x", "y"],
-                                            x_title="Number of clusters",
-                                            y_title="Within-cluster sum of squares",
-                                            title="Elbow Method",
-                                            overlay_point=True,
-                                            width=400,
-                )
-            with gr.Row():
-                bset_cluster_number_DataFrame = gr.DataFrame(value=[],
-                                                             label="根据轮廓曲线推荐的聚类数（y越大越好）",
-                                                             visible=False
-                )
+            cluster_images_button = gr.Button("开始聚类并展示结果")
     with gr.Row():
         with gr.Accordion("聚类图片展示", open=True):
+            with gr.Row(visible=False) as confirm_cluster_Row:
+                process_clusters_method = gr.Radio(label="图片处理方式", choices=["重命名图片","在Cluster文件夹下生成聚类副本","移动原图至Cluster文件夹"])
+                confirm_cluster_button = gr.Button(value="确认聚类", elem_classes="attention", variant="primary")
             gr_Accordion_and_Gallery_list = create_gr_gallery(MAX_GALLERY_NUMBER)
             
     cluster_images_button.click(fn=cluster_images,
                                 inputs=[images_dir, confirmed_cluster_number, use_cache],
-                                outputs=gr_Accordion_and_Gallery_list
+                                outputs=gr_Accordion_and_Gallery_list + [confirm_cluster_Row]
     )
-            
+
     cluster_analyse_button.click(fn=cluster_analyse,
                                  inputs=[images_dir, max_cluster_number],
                                  outputs=[Silhouette_gr_Plot, Elbow_gr_Plot, bset_cluster_number_DataFrame]
