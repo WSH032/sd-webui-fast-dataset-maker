@@ -77,10 +77,53 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
     kmeans_model = skc.KMeans( n_clusters=min( confirmed_cluster_number, len(tags_list) ) ) # 创建K-Means模型
     y_pred = kmeans_model.fit_predict(X) # 训练模型并得到聚类结果
     centers = kmeans_model.cluster_centers_
+    stop_tags = tfvec.stop_words_
     
-    #分类的ID
+    # 分类的ID
     clusters_ID = np.unique(y_pred)
     clustered_images_list = [np.compress(np.equal(y_pred, i), images_files_list).tolist() for i in clusters_ID]
+    
+    # pandas处理数据
+    all_center = pd.Series( np.mean(X, axis=0), tf_tags_list )
+
+    def _create_pred_df():
+        vec_df = pd.DataFrame(X,columns=tf_tags_list)  # 向量
+        cluster_df = pd.DataFrame( {"images_file":images_files_list, "y_pred":y_pred} )  #聚类结果
+        pred_df = pd.concat([cluster_df, vec_df ], axis=1)
+        return pred_df
+    
+    pred_df = _create_pred_df()
+    tags_df = pred_df.iloc[:,2:]  # 取出与tags有关部分
+    
+
+    def find_duplicate_tags(tags_df):
+        """ 找出一个dataframe内每一行都不为0的列，返回一个pandas.Index对象 """
+        try:
+            tags_df.astype(float)
+        except Exception as e:
+            print(f"需要找出共有标签的tags_df内包含了非法值 error: {e}")
+        tags_columns_index = tags_df.columns  # 取出列标签
+        duplicate_tags_index = tags_columns_index[ tags_df.all(axis=0) ] # 找出每一行都为真,即不为0的列名，即共有的tags
+        return duplicate_tags_index  # 输出pandas.Index对象
+    
+    common_duplicate_tags_set = set( find_duplicate_tags(tags_df) )
+    
+    def _fine_cluster_duplicate_tags(pred_df):
+        cluster_duplicate_tags_list = []
+        # 找到每个聚类各自的重复标签
+        for i in clusters_ID:
+            cluster_df = pred_df[pred_df["y_pred"] == i]
+            cluster_tags_df = cluster_df.iloc[:,2:]  # 取出与tags有关部分
+            cluster_duplicate_tags_list.append( set( find_duplicate_tags(cluster_tags_df) ) )
+        return cluster_duplicate_tags_list
+        """
+        # 找到每个聚类各自的重复标签
+        cluster_duplicate_tags_set_list = pred_df.groupby('y_pred',key=None).apply(lambda x: find_duplicate_tags(x.iloc[:, 2:]))
+        return cluster_duplicate_tags_set_list
+        """
+    
+    cluster_duplicate_tags_list = _fine_cluster_duplicate_tags(pred_df)
+            
     
     # 赋值到全局组件中，将会传递至confirm_cluster_button.click
     global_dict_State["clustered_images_list"] = clustered_images_list
