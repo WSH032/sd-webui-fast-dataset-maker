@@ -9,6 +9,8 @@ Created on Fri May  5 17:38:31 2023
 import sklearn.cluster as skc
 import sklearn.feature_extraction.text as skt
 from sklearn.metrics import silhouette_score
+from sklearn.inspection import permutation_importance
+from sklearn.feature_selection import chi2, mutual_info_regression, mutual_info_classif, f_classif, SelectPercentile, SelectKBest
 import os 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -47,10 +49,13 @@ def create_Vectorizer(tokenizer: Callable[ [str], List[str] ]=None,
     返回指定的特征提取器
     默认返回 默认的TfidfVectorizer
     """
+    
+    tokenizer = comma_tokenizer
+    
     if use_CountVectorizer:
         tfvec = skt.CountVectorize(tokenizer=tokenizer) 
     else:
-        tfvec = skt.TfidfVectorizer(tokenizer=tokenizer)
+        tfvec = skt.TfidfVectorizer(tokenizer=tokenizer, binary=True, max_df=0.99)
         
     return tfvec
 
@@ -72,60 +77,126 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
     tfvec = create_Vectorizer()
     X = tfvec.fit_transform(tags_list).toarray()  # 向量特征
     tf_tags_list = tfvec.get_feature_names()  # 向量每列对应的tag
+    stop_tags = tfvec.stop_words_  # 被过滤的tag
     
     # 聚类，最大聚类数不能超过样本数
-    kmeans_model = skc.KMeans( n_clusters=min( confirmed_cluster_number, len(tags_list) ) ) # 创建K-Means模型
+    n_clusters = min( confirmed_cluster_number, len(tags_list) )
+    kmeans_model = skc.KMeans( n_clusters=n_clusters )  # 创建K-Means模型
+    # kmeans_model = skc.SpectralClustering( n_clusters=n_clusters )  # 谱聚类模型
+    # kmeans_model = skc.AgglomerativeClustering( n_clusters=n_clusters )  # 层次聚类
     y_pred = kmeans_model.fit_predict(X) # 训练模型并得到聚类结果
-    centers = kmeans_model.cluster_centers_
-    stop_tags = tfvec.stop_words_
+    print(y_pred)
+    # centers = kmeans_model.cluster_centers_  #kmeans模型的聚类中心，用于调试和pandas计算，暂不启用
+    
+    
+    """
+    特征重要性分析，计算量太大，不启用
+    t1 = datetime.now()
+    permutation_importance(kmeans_model, X, y_pred, n_jobs=-1)
+    t2 = datetime.now()
+    print(t2-t1)
+    """
     
     # 分类的ID
     clusters_ID = np.unique(y_pred)
     clustered_images_list = [np.compress(np.equal(y_pred, i), images_files_list).tolist() for i in clusters_ID]
     
+    # #################################
     # pandas处理数据
-    all_center = pd.Series( np.mean(X, axis=0), tf_tags_list )
+    all_center = pd.Series( np.mean(X, axis=0), tf_tags_list )  # 全部样本的中心
+    
 
-    def _create_pred_df():
+    # 注意！！！！不要改变{"images_file":images_files_list, "y_pred":y_pred}的位置，前两列必须是这两个
+    def _create_pred_df(X, tf_tags_list, images_files_list, y_pred):
+        """
+        创建包含了聚类结果的panda.DataFrame
+        X为特征向量， tf_tags_list为特征向量每列对应的tag， images_files_list为每行对应的图片名字， y_pred为每行预测结果
+        """
         vec_df = pd.DataFrame(X,columns=tf_tags_list)  # 向量
         cluster_df = pd.DataFrame( {"images_file":images_files_list, "y_pred":y_pred} )  #聚类结果
         pred_df = pd.concat([cluster_df, vec_df ], axis=1)
         return pred_df
-    
-    pred_df = _create_pred_df()
-    tags_df = pred_df.iloc[:,2:]  # 取出与tags有关部分
-    
+
+    pred_df = _create_pred_df(X, tf_tags_list, images_files_list, y_pred)  # 包含了聚类结果，图片名字，和各tag维度的向量值
+    # 确保标签部分矩阵为数值类型
+    try:
+        pred_df.iloc[:,2:].astype(float)
+    except Exception as e:
+        print(f"pred_df的标签部分包含了非法值 error: {e}")
+
 
     def find_duplicate_tags(tags_df):
         """ 找出一个dataframe内每一行都不为0的列，返回一个pandas.Index对象 """
-        try:
-            tags_df.astype(float)
-        except Exception as e:
-            print(f"需要找出共有标签的tags_df内包含了非法值 error: {e}")
         tags_columns_index = tags_df.columns  # 取出列标签
         duplicate_tags_index = tags_columns_index[ tags_df.all(axis=0) ] # 找出每一行都为真,即不为0的列名，即共有的tags
         return duplicate_tags_index  # 输出pandas.Index对象
     
-    common_duplicate_tags_set = set( find_duplicate_tags(tags_df) )
+    # 其中 pred_df.iloc[:,2:] 为与tags有关部分
+    common_duplicate_tags_set = set( find_duplicate_tags( pred_df.iloc[:,2:] ) )
     
-    def _fine_cluster_duplicate_tags(pred_df):
-        cluster_duplicate_tags_list = []
-        # 找到每个聚类各自的重复标签
+
+    def _cluster_feature_select(clusters_ID, X, y_pred, pred_df):
+        """
+        根据聚类结果，评估是哪个特征导致了这个类的生成
+        clusters_ID是聚类后会有的标签列表如[-1,0,1...]  只有DBSCAN会包含-1,代表噪声
+        X是特征向量
+        y_pred是聚类结果
+        pred_df是聚类信息dataframe
+        """
+        
+        # 评分器： chi2, mutual_info_regression, f_classif
+        # 选择器： SelectPercentile, SelectKBest
+        
+        cluster_feature_tags_list = []
+
         for i in clusters_ID:
-            cluster_df = pred_df[pred_df["y_pred"] == i]
-            cluster_tags_df = cluster_df.iloc[:,2:]  # 取出与tags有关部分
-            cluster_duplicate_tags_list.append( set( find_duplicate_tags(cluster_tags_df) ) )
-        return cluster_duplicate_tags_list
-        """
-        # 找到每个聚类各自的重复标签
-        cluster_duplicate_tags_set_list = pred_df.groupby('y_pred',key=None).apply(lambda x: find_duplicate_tags(x.iloc[:, 2:]))
-        return cluster_duplicate_tags_set_list
-        """
-    
-    cluster_duplicate_tags_list = _fine_cluster_duplicate_tags(pred_df)
+            # 将第i类和其余的类二分类
+            temp_pred = y_pred.copy()
+            temp_pred[ temp_pred != i ] = i+1
             
+            """
+            # 依据特征tags的数量分段决定提取特征的数量
+            # 第一段斜率0.5，第二段0.3，第三段为log2(x-50)
+            def cul_k_by_tags_len(tags_len):
+                if tags_len < 10:
+                    return max( 1, 0.5*tags_len )
+                if tags_len <60:
+                    return 5 + 0.3*(tags_len-10)
+                if True:
+                    return 20 - math.log2(60-50) + math.log2(tags_len-50)
+            k = round( cul_k_by_tags_len(X.shape[1]) )
+            """
+            k = min(10, X.shape[1])  # 最多只选10个特征，不够10个就按特征数来
+            
+            # 特征选择器
+            # Selector = SelectPercentile(chi2, percentile=30)
+            Selector = SelectKBest(chi2, k=k)
+            
+            # 开始选择
+            X_selected = Selector.fit_transform(X, temp_pred)  # 被选择的特征向量矩阵 用于调试
+            X_selected_index = Selector.get_support(indices=True)  # 被选中的特征向量所在列的索引
+            tags_selected = np.array(tf_tags_list)[X_selected_index]  # 对应的被选择的tags列表 用于调试
+            
+            # 将pred_df中第i类的部分拿出来分析
+            cluster_df = pred_df[pred_df["y_pred"] == i]  # 取出所处理的第i聚类df部分
+            cluster_tags_df = cluster_df.iloc[:,2:]  # 取出第i聚类df中与tags有关部分
+            cluster_selected_tags_df = cluster_tags_df.iloc[:,X_selected_index]  # 第i聚类df中被选择的tags
+            
+            # 这些被选择的特征，只要这个聚类有一个样本有，就算做prompt； 如果都没有，则算做negetive
+            prompt_tags_list = cluster_selected_tags_df.columns[ cluster_selected_tags_df.any(axis=0) ].tolist()
+            negetive_tags_list = cluster_selected_tags_df.columns[ ~cluster_selected_tags_df.any(axis=0) ].tolist()
+            
+            # 最终的特征重要性分析结果，为一个列表，子元素为字典，字典中包含了每一个聚类的prompt和negetive tags
+            cluster_feature_tags_list.append( {"prompt":prompt_tags_list, "negetive":negetive_tags_list} )
+            
+        return cluster_feature_tags_list
+
+    cluster_feature_tags_list = _cluster_feature_select(clusters_ID, X, y_pred, pred_df)
     
+
     # 赋值到全局组件中，将会传递至confirm_cluster_button.click
+    global_dict_State["common_duplicate_tags_set"] = common_duplicate_tags_set
+    global_dict_State["cluster_feature_tags_list"] = cluster_feature_tags_list
     global_dict_State["clustered_images_list"] = clustered_images_list
     global_dict_State["images_dir"] = images_dir
     
@@ -158,9 +229,15 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
     # 注意，返回的列表长度为显示gallery组件数的两倍
     # 因为列表里偶数位为Accordion组件，奇数位为Gallery组件
     visible_gr_gallery_list = []
-    for i in range( len(clustered_images_list) ):
+    # 最多只能处理MAX_GALLERY_NUMBER个画廊
+    for i in range( min( len(clustered_images_list), MAX_GALLERY_NUMBER ) ):
         gallery_images_tuple_list = [ (os.path.join(gallery_images_dir,name), name) for name in clustered_images_list[i] ]
-        visible_gr_gallery_list.extend( [ gr.update(visible=True), gr.update( value=gallery_images_tuple_list, visible=True ) ] )
+        prompt = cluster_feature_tags_list[i].get("prompt", [])
+        negetive = cluster_feature_tags_list[i].get("negetive", [])
+        visible_gr_gallery_list.extend( [gr.update( visible=True, label=f"聚类{i} :\nprompt: {prompt}\nnegetive: {negetive}" ),
+                                         gr.update( value=gallery_images_tuple_list, visible=True)
+                                        ] 
+        )
         
     unvisible_gr_gallery_list = [ gr.update( visible=False ) for i in range( 2*( MAX_GALLERY_NUMBER-len(clustered_images_list) ) ) ]
     
@@ -244,6 +321,8 @@ def confirm_cluster(process_clusters_method:int, global_dict_State: dict):
                                        type="index",
     )
     
+    global_dict_State["common_duplicate_tags_set"] = common_duplicate_tags_set
+    global_dict_State["cluster_feature_tags_list"] = cluster_feature_tags_list
     global_dict_State["clustered_images_list"] = clustered_images_list
     global_dict_State["images_dir"] = images_dir
     
@@ -409,7 +488,8 @@ with gr.Blocks() as demo:
                 )
                 confirm_cluster_button = gr.Button(value="确认聚类", elem_classes="attention", variant="primary")
             gr_Accordion_and_Gallery_list = create_gr_gallery(MAX_GALLERY_NUMBER)
-            
+
+
     cluster_images_button.click(fn=cluster_images,
                                 inputs=[images_dir, confirmed_cluster_number, use_cache, global_dict_State],
                                 outputs=gr_Accordion_and_Gallery_list + [confirm_cluster_Row] + [global_dict_State]
