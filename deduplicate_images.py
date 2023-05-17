@@ -9,7 +9,7 @@ Created on Fri May  5 17:38:31 2023
 # image_dir = r"C:\Users\WSH\Desktop\B站文件\冷门参数"
 # image_list = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.lower().endswith(('.jpg', '.png', '.jpeg', '.bmp'))]
 
-IMAGE_EXTENSION = ('.jpg', '.png', '.jpeg', '.bmp')
+# IMAGE_EXTENSION = ('.jpg', '.png', '.jpeg', '.bmp')
 
 import gradio as gr
 from imagededup.methods import PHash

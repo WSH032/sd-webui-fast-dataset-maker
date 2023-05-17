@@ -11,6 +11,8 @@ import sklearn.feature_extraction.text as skt
 from sklearn.metrics import silhouette_score
 from sklearn.inspection import permutation_importance
 from sklearn.feature_selection import chi2, mutual_info_regression, mutual_info_classif, f_classif, SelectPercentile, SelectKBest
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import normalize
 import os 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -76,14 +78,19 @@ def cluster_images(images_dir: str, confirmed_cluster_number: int, use_cache: bo
     # tags转为向量特征
     tfvec = create_Vectorizer()
     X = tfvec.fit_transform(tags_list).toarray()  # 向量特征
-    tf_tags_list = tfvec.get_feature_names()  # 向量每列对应的tag
+    tf_tags_list = tfvec.get_feature_names_out()  # 向量每列对应的tag
     stop_tags = tfvec.stop_words_  # 被过滤的tag
     
+    SVD = TruncatedSVD( n_components = X.shape[1] - 1 )
+    X_SVD = SVD.fit_transform(X)
+    X_SVD = normalize(X_SVD)
+
     # 聚类，最大聚类数不能超过样本数
     n_clusters = min( confirmed_cluster_number, len(tags_list) )
     kmeans_model = skc.KMeans( n_clusters=n_clusters )  # 创建K-Means模型
-    # kmeans_model = skc.SpectralClustering( n_clusters=n_clusters )  # 谱聚类模型
-    # kmeans_model = skc.AgglomerativeClustering( n_clusters=n_clusters )  # 层次聚类
+    # kmeans_model = skc.SpectralClustering( n_clusters=n_clusters, affinity='cosine' )  # 谱聚类模型
+    # kmeans_model = skc.AgglomerativeClustering( n_clusters=n_clusters, affinity='cosine', linkage='average' )  # 层次聚类
+    # kmeans_model = skc.OPTICS(min_samples=n_clusters, metric="cosine")
     y_pred = kmeans_model.fit_predict(X) # 训练模型并得到聚类结果
     print(y_pred)
     # centers = kmeans_model.cluster_centers_  #kmeans模型的聚类中心，用于调试和pandas计算，暂不启用
@@ -266,8 +273,8 @@ def cluster_analyse(images_dir: str, max_cluster_number: int):
     wss = [] # 存储每个聚类数对应的簇内平方和
     silhouette_scores = []  # 用于存储不同k值对应的轮廓系数
     
-    # 最大聚类数不能超过样本
-    k_range = range( 1, min(max_cluster_number+1, len(tags_list)+1) ) # 聚类数的范围(左闭右开)
+    # 最大聚类数不能超过样本,最多只能样本数-1
+    k_range = range( 1, min(max_cluster_number+1, len(tags_list) ) ) # 聚类数的范围(左闭右开)
     
     print("聚类分析开始")
     for k in tqdm(k_range):
@@ -421,9 +428,11 @@ def confirm_cluster(process_clusters_method:int, global_dict_State: dict):
 ##############################################################################################################################################
 ##############################################################################################################################################
 
+css = """
+.attention {color: red  !important}
+"""
 
-
-with gr.Blocks() as demo:
+with gr.Blocks(css=css) as demo:
     
     global_dict_State = gr.State(value={})  # 这个将会起到全局变量的作用，类似于globals()
     """
@@ -476,7 +485,7 @@ with gr.Blocks() as demo:
     with gr.Box():
         with gr.Row():
             confirmed_cluster_number = gr.Slider(2, MAX_GALLERY_NUMBER, step=1, value=2, label="聚类数")
-            cluster_images_button = gr.Button("开始聚类并展示结果")
+            cluster_images_button = gr.Button("开始聚类并展示结果", variant="primary")
     with gr.Row():
         with gr.Accordion("聚类图片展示", open=True):
             with gr.Row(visible=False) as confirm_cluster_Row:
@@ -486,7 +495,7 @@ with gr.Blocks() as demo:
                                                    choices=process_clusters_method_choices,
                                                    type="index",
                 )
-                confirm_cluster_button = gr.Button(value="确认聚类", elem_classes="attention", variant="primary")
+                confirm_cluster_button = gr.Button(value="确认聚类", elem_classes="attention")
             gr_Accordion_and_Gallery_list = create_gr_gallery(MAX_GALLERY_NUMBER)
 
 
