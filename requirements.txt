@@ -1,0 +1,19 @@
+# for all
+gradio>=3.24.1
+tqdm
+
+# for download
+requests
+
+# for deduplicate
+toml>=0.10.2
+imagededup
+
+pillow
+
+# for cluster
+scikit-learn >= 1.2.2
+matplotlib
+numpy
+scipy
+pandas
