@@ -1,4 +1,4 @@
-# sd-fast-dataset-maker-webui
+# sd-webui-fast-dataset-maker
 Scrape images from Gelbooru
 Deduplicate and cluster by WebUI
 

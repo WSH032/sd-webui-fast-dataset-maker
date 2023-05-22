@@ -1,9 +1,11 @@
 # for all
 gradio>=3.24.1
 tqdm
+pandas
 
 # for download
-requests
+httpx
+aiofiles
 
 # for deduplicate
 toml>=0.10.2
@@ -16,4 +18,4 @@ scikit-learn >= 1.2.2
 matplotlib
 numpy
 scipy
-pandas
+
