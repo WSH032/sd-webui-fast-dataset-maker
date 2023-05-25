@@ -1,0 +1,3 @@
+[submodule "module/Gelbooru-API-Downloader"]
+	path = module/Gelbooru-API-Downloader
+	url = https://github.com/WSH032/Gelbooru-API-Downloader.git
