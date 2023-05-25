@@ -1,11 +1,10 @@
-#@title 下载类 Downloader
-
 # -*- coding: utf-8 -*-
 """
 Created on Fri May 19 23:26:50 2023
 
 @author: WSH
 """
+
 
 import httpx
 import aiofiles
@@ -20,7 +19,8 @@ from urllib.parse import urlencode
 import math
 import argparse
 
-
+##############################
+# 下载类 Downloader
 class Downloader(object):
 
     def __init__(self,
@@ -45,7 +45,6 @@ class Downloader(object):
         计算文件的 MD5 哈希值
         
         file_path为需要计算的文件路径
-        executor为线程池或进程池
         
         只有成功计算了哈希值才返回，否则就返回None
         """
@@ -65,11 +64,11 @@ class Downloader(object):
 
 
     async def download(self,
-                download_dir,
-                file_url,
-                file_name=None,
-                tags=None,
-                md5=None,):
+                        download_dir,
+                        file_url,
+                        file_name=None,
+                        tags=None,
+                        md5=None,):
         """
         下载文件和将tags写入文本
 
@@ -214,8 +213,8 @@ class Downloader(object):
                 semaphore.release()      
 
 
-#@title GetAPI
-
+##############################
+# API类 GetAPI
 class GetAPI(object):
     
     base_url = 'https://gelbooru.com/index.php'
@@ -288,8 +287,8 @@ class GetAPI(object):
                 await async_client.aclose()
 
 
-#@title 协程池调度器
-
+##############################
+# 协程池调度器
 async def launch_executor(files_df,
               download_dir: str,
               max_workers: int=10,
@@ -380,8 +379,8 @@ async def launch_executor(files_df,
             await used_client.aclose()
             
             
-#@title 主部分
-##############################################################################################
+##############################
+# 顶层封装
 async def Scrape_images(tags :str,
           max_images_number: int,
           download_dir :str,
@@ -517,8 +516,10 @@ async def Scrape_images(tags :str,
         download_info_counter.print()
 
 
-
+##############################
+# 命令行脚本
 if __name__ == "__main__":
+    
     """ 用命令行读取参数并启动下载协程 """
     
     parser = argparse.ArgumentParser()
