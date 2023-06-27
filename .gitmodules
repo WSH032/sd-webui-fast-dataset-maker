@@ -1,3 +1,12 @@
-[submodule "Gelbooru-API-Downloader"]
-	path = Gelbooru-API-Downloader
+[submodule "extensions/dataset_tag_editor_standalone"]
+	path = extensions/dataset_tag_editor_standalone
+	url = https://github.com/WSH032/dataset-tag-editor-standalone.git
+[submodule "extensions/sd_webui_infinite_image_browsing"]
+	path = extensions/sd_webui_infinite_image_browsing
+	url = https://github.com/WSH032/sd-webui-infinite-image-browsing.git
+[submodule "extensions/Gelbooru_API_Downloader"]
+	path = extensions/Gelbooru_API_Downloader
 	url = https://github.com/WSH032/Gelbooru-API-Downloader.git
+[submodule "extensions/image_deduplicate_cluster_webui"]
+	path = extensions/image_deduplicate_cluster_webui
+	url = https://github.com/WSH032/image-deduplicate-cluster-webui.git

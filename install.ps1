@@ -1,5 +1,5 @@
 function InstallFail {
-    Write-Output "安装失败。"
+    Write-Output "Install failed."
     Read-Host | Out-Null ;
     Exit
 }
@@ -15,17 +15,30 @@ function Check {
 }
 
 if (!(Test-Path -Path "venv")) {
-    Write-Output "正在创建虚拟环境..."
+    Write-Output "Creating venv..."
     python -m venv venv
-    Check "创建虚拟环境失败，请检查 python 是否安装完毕以及 python 版本是否为64位版本的python 3.10、或python的目录是否在环境变量PATH内。"
+    Check "Creating venv failed, please check your python."
 }
 
 .\venv\Scripts\activate
-Check "激活虚拟环境失败。"
+Check "Activate venv failed."
 
-Write-Output "安装依赖"
+"
+If you want to use CUDA, you should choose Y.
+"
+
+$install_torch = Read-Host "Install torch==2.0.0 + CUDA==118 ? Y/N (default Y)"
+if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq ""){
+    Write-Output "Installing torch==2.0.0 + CUDA==118..."
+    pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
+    Check "Install torch failed, please delet venv and run again."
+    Write-Output "Install torch successfully."
+    Start-Sleep -Seconds 1
+}
+
+Write-Output "pip requirements.txt installing..."
 pip install -r requirements.txt
-Check "依赖安装失败。"
+Check "pip requirements.txt install failed."
 
-Write-Output "安装完毕"
+Write-Output "All done"
 Read-Host | Out-Null ;

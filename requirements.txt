@@ -1,21 +1,39 @@
-# for all
-gradio>=3.24.1
+# If you want to install with CUDA, please use the following command:
+
+# --extra-index-url https://download.pytorch.org/whl/cu118
+# torch==2.0.0+cu118
+# torchvision==0.15.1+cu118
+
+
+# for all #
+torch
+gradio>=3.31.0
 tqdm
+pillow
+numpy
 pandas
 
-# for download
+# for dataset-tag-editor-standalone #
+transformers>=4.27.4
+requests
+
+# for Gelbooru-API-Downloader #
 httpx
 aiofiles
 
-# for deduplicate
-toml>=0.10.2
+# for image-deduplicate-cluster-webui #
+toml
 imagededup
+scikit-learn>= 1.2.2
+tensorflow>=2.10.1, <2.11
+huggingface_hub
+opencv-python>=4.7.0.68
+onnx
+onnxruntime-gpu
+tf2onnx
 
-pillow
-
-# for cluster
-scikit-learn >= 1.2.2
-matplotlib
-numpy
-scipy
-
+# for sd-webui-infinite-image-browsing #
+fastapi
+uvicorn
+piexif
+python-dotenv
