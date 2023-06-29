@@ -1,7 +1,6 @@
 import os
 import sys
-import time
-from typing import Tuple, List, Dict, Any, Optional, Union, Callable
+from typing import Tuple, List, Callable
 
 import gradio as gr
 from fastapi import FastAPI
@@ -162,12 +161,23 @@ if __name__ == "__main__":
 
     def demo_launch():
         kwargs = {}
-        if cmd_opts_dict["inbrowser"]: kwargs["inbrowser"] = True
-        if cmd_opts_dict["share"]: kwargs["share"] = True
-        if cmd_opts_dict["debug"]: kwargs["debug"] = True
-        if cmd_opts_dict["prevent_thread_lock"]: kwargs["prevent_thread_lock"] = True
-        if isinstance( cmd_opts_dict["server_port"], int ): kwargs["server_port"] = cmd_opts_dict["server_port"]
-        if isinstance( cmd_opts_dict["server_name"], str ): kwargs["server_name"] = cmd_opts_dict["server_name"]
+        if cmd_opts_dict["inbrowser"]:
+            kwargs["inbrowser"] = True
+
+        if cmd_opts_dict["share"]:
+            kwargs["share"] = True
+
+        if cmd_opts_dict["debug"]:
+            kwargs["debug"] = True
+
+        if cmd_opts_dict["prevent_thread_lock"]:
+            kwargs["prevent_thread_lock"] = True
+
+        if isinstance( cmd_opts_dict["server_port"], int ):
+            kwargs["server_port"] = cmd_opts_dict["server_port"]
+            
+        if isinstance( cmd_opts_dict["server_name"], str ):
+            kwargs["server_name"] = cmd_opts_dict["server_name"]
         
         webui_utils.launch(**kwargs)
 

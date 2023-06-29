@@ -1,4 +1,4 @@
-from typing import Tuple, Callable, List, Optional
+from typing import  List, Optional
 import logging
 
 from modules.cmd_args import parser

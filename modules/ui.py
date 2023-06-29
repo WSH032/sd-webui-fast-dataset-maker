@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Callable, List, Tuple
 
 import gradio as gr

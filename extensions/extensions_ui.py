@@ -1,6 +1,5 @@
 import os
-import logging
-from typing import Tuple, List, Dict, Any, Optional, Union, Callable
+from typing import Tuple, Union, Callable
 import sys
 from pathlib import Path
 
@@ -53,8 +52,8 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> Tuple[Callable, 
 
     """ extension_name: 扩展名字，即extensions文件夹中的文件夹名字 """
 
-    from extensions.sd_webui_infinite_image_browsing.scripts.iib.api import infinite_image_browsing_api, send_img_path
-    from extensions.sd_webui_infinite_image_browsing.scripts.iib.tool import locale, read_info_from_image
+    from extensions.sd_webui_infinite_image_browsing.scripts.iib.api import send_img_path
+    from extensions.sd_webui_infinite_image_browsing.scripts.iib.tool import read_info_from_image
     from extensions.sd_webui_infinite_image_browsing.scripts.iib.logger import logger
     from extensions.sd_webui_infinite_image_browsing.app import AppUtils
     from PIL import Image
