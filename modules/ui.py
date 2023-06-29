@@ -1,14 +1,22 @@
 import os
 from typing import Callable, List, Tuple
+import sys
 
 import gradio as gr
 from gradio import routes
 
 from modules import modules_tools
 from modules import shared
-from extensions.extensions import registered_extensions, disable_extensions, check_extensions
+from extensions.extensions import (
+    registered_extensions,
+    disable_extensions,
+    check_extensions,
+    sys_path_for_extensions,
+)
 from extensions.extensions_tools import javascript_html
 
+
+recover_sys_path = True  # 是否恢复sys.path
 
 GradioTemplateResponseOriginal = routes.templates.TemplateResponse  # 备份一下，因为一会要修改
 
@@ -31,6 +39,8 @@ def create_ui() -> Tuple[gr.Blocks, List[Callable]]:
     js_str = ""
     css_str = ""
 
+    sys_path = sys_path_for_extensions()  # 各扩展正常工作需要将它们所在的文件夹加入sys.path，这里返回的是修改前的sys.path
+    
     # global registered_extensions
     # 拷贝下，避免修改了原字典
     create_ui_extensions_dict_copy = registered_extensions.copy()
@@ -73,5 +83,8 @@ def create_ui() -> Tuple[gr.Blocks, List[Callable]]:
         for interface, label, ifid in interfaces_tuple_list:
             with gr.Tab(label, id=ifid, elem_id=f"tab_{ifid}"):
                 interface.render()
+    
+    if recover_sys_path:
+        sys.path = sys_path  # 恢复sys.path
     
     return demo, callbacks_app_started

@@ -6,7 +6,7 @@ import gradio as gr
 from fastapi import FastAPI
 from gradio.utils import  TupleNoPrint
 
-sys_path = sys.path  # 备份
+sys_path = sys.path.copy()  # 备份
 
 
 class WebuiUtils(object):
@@ -17,15 +17,35 @@ class WebuiUtils(object):
             help: bool = False,
             **kwargs
         ) -> None:
-        """
-        初始化modules.shared.cmd_opts，用于设置各插件参数
+        """初始化modules.shared.cmd_opts，用于设置各插件参数
 
-        cmd = True时: 先从命令行获取参数，否则先获取默认参数
-        help = True时: 传入--help参数，用于获取帮助信息，但是会中断程序
-        传入的**kwargs请参阅extensions.extensions_preload，将会覆盖modules.shared.cmd_opts中相应参数
-        传入的**kwargs将会用于配置插件
-            虽然也可以修改modules.cmd_args的参数，但是不建议这么做，因为其是关于demo的启动参数
-            这些启动参数只会在__main__中被使用
+        Args:
+            cmd (bool, optional): cmd = True时: 先从命令行获取参数，否则先获取默认参数. Defaults to False.
+            help (bool, optional): help = True时: 传入--help参数，用于获取帮助信息，但是会中断程序. Defaults to False.
+
+            **kwargs:
+                传入的**kwargs请参阅extensions.extensions_preload，将会覆盖modules.shared.cmd_opts中相应参数，将会用于配置插件
+                虽然也可以修改modules.cmd_args的参数，但是不建议这么做，因为其是关于demo的启动参数，这些启动参数只会在__main__中被使用
+               
+        Example:
+            from webui import WebuiUtils
+            webui_utils = WebuiUtils(
+
+                # for image_browsing setting
+                sd_webui_config = "config.json",
+                extra_paths = ["path"],
+                update_image_index = True,
+                
+                # disable extension
+                disable_image_browsing = False,
+                disable_deduplicate_cluster = False,
+                disable_tag_editor = False,
+            )
+        
+        Tips:
+            在后续的create_ui()中，会将各扩展的文件夹加入sys.path，以便各扩展能正常工作
+            一但create_ui()创建完成，就会恢复sys.path
+            如果不需要恢复sys.path，可以在实例化后， modules.ui.recover_sys_path = False
         """
 
         # 必须在 modules.ui 之前，将会修改cmd_opts
@@ -73,21 +93,34 @@ class WebuiUtils(object):
         return self
 
     def queue(self, **kwargs):
-        """
-        为self.demo启动queue
+        """为self.demo启动queue
 
-        所传递的参数都会被传给gr.Blocks.queue()，请采用 **kwargs 格式传入
+        Args:
+            **kwargs: 所传递的参数都会被传给 self.demo.queue: gr.Blocks.queue 
+
+        Example:
+            webui_utils.queue(concurrency_count=2)
+        
+        Returns:
+            WebuiUtils: 自身实例
         """
+
         self.check_self_demo()
 
         self.demo = self.demo.queue(**kwargs) # type: ignore
         return self
     
     def launch(self, **kwargs) -> tuple[FastAPI, str, str]:
-        """
-        启动self.demo
+        """启动self.demo
 
-        所传递的参数都会被传给gr.Blocks.launch()，请采用 **kwargs 格式传入
+        Args:
+            **kwargs: 所传递的参数都会被传给 self.demo.launch: gr.Blocks.launch
+
+        Example:
+            webui_utils.launch(debug=True, server_port=7860)
+        
+        Returns:
+            tuple[FastAPI, str, str]: 与 gr.Blocks.launch 返回值一致
         """
 
         self.check_self_demo()

@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Dict, Callable
+from typing import Dict, Callable, List
 import sys
 from collections import OrderedDict
 
@@ -62,8 +62,17 @@ def check_extensions(registered_extensions: Dict[str, Callable]) -> Dict[str, Ca
     
     return registered_extensions
 
+# TODO: 最好是调用某个扩展的时候再修改相应的sys.path，而不是一次性修改全部
+def sys_path_for_extensions() -> List[str]:
+    """将每个扩展的所在的文件夹添加到sys.path中，以便各扩展可以正常import
 
-# 为了每个脚本内部能正常工作
-for extension in registered_extensions:
-    # 让扩展在前面
-    sys.path = [os.path.join(extensions_dir, extension)] + sys.path
+    Returns:
+        List[str]: 改变之前的sys.path.copy()
+    """
+    sys_path = sys.path.copy()
+
+    for extension in registered_extensions:
+        # 让扩展在前面
+        sys.path = [os.path.join(extensions_dir, extension)] + sys.path
+    
+    return sys_path
