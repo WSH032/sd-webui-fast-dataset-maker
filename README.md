@@ -39,10 +39,36 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
 **[dataset-tag-editor-standalone 完整展示](https://github.com/WSH032/sd-webui-fast-dataset-maker/assets/126865849/919a2d87-d399-41a9-86bf-b8c4e50973b0)**
 
 
+## 😀Development
+如果你觉得此项目有用💪，可以去 [![GitHub Repo stars](https://img.shields.io/github/stars/WSH032/sd-webui-fast-dataset-maker?style=social)](https://github.com/WSH032/sd-webui-fast-dataset-maker) 点一颗小星星🤤，非常感谢你⭐
+
+遇到问题可以在[Github上提issue ❓](https://github.com/WSH032/sd-webui-fast-dataset-maker/issues)
+
+
+## 更新 Update
+部署使用时更新方式：
+
+本项目带有子模块，请使用以下命令拉取新的更新，并再次重复 `安装 Install` ，以免有新的依赖要求
+```shell
+git pull --recurse-submodules 
+```
+如果你不会使用git命令，可以运行`update.ps1`完成更新
 
 ## 安装 Install
 
 ### （一）Colab使用
+#### 本项目链接 Fast-Dataset-Maker Colab
+| Notebook Name | Description | Link | Old-Version |
+| --- | --- | --- | --- |
+| [fast_dataset_maker](https://github.com/WSH032/sd-webui-fast-dataset-maker) `NEW` | 整合了 `图库`，`下载`，`去重`，`聚类` 的图片数据集WebUI | [![](https://img.shields.io/static/v1?message=Open%20in%20Colab&logo=googlecolab&labelColor=5c5c5c&color=0f80c1&label=%20&style=flat)](https://colab.research.google.com/github/WSH032/sd-webui-fast-dataset-maker/blob/main/fast_dataset_maker.ipynb) |
+
+---
+
+#### 友情链接 SD-Lora-Training Colab
+| Notebook Name | Description | Link | Old-Version |
+| --- | --- | --- | --- |
+| [Colab_Lora_train](https://github.com/WSH032/lora-scripts/) | 基于[Akegarasu/lora-scripts](https://github.com/Akegarasu/lora-scripts)的定制化Colab notebook | [![](https://img.shields.io/static/v1?message=Open%20in%20Colab&logo=googlecolab&labelColor=5c5c5c&color=0f80c1&label=%20&style=flat)](https://colab.research.google.com/github/WSH032/lora-scripts/blob/main/Colab_Lora_train.ipynb) | [![](https://img.shields.io/static/v1?message=Older%20Version&logo=googlecolab&labelColor=5c5c5c&color=e74c3c&label=%20&style=flat)](https://colab.research.google.com/drive/1_f0qJdM43BSssNJWtgjIlk9DkIzLPadx) |
+| [kohya_train_webui](https://github.com/WSH032/kohya-config-webui) `NEW` | 基于[WSH032/kohya-config-webui](https://github.com/WSH032/kohya-config-webui)的WebUI版Colab notebook | [![](https://img.shields.io/static/v1?message=Open%20in%20Colab&logo=googlecolab&labelColor=5c5c5c&color=0f80c1&label=%20&style=flat)](https://colab.research.google.com/github/WSH032/kohya-config-webui/blob/main/kohya_train_webui.ipynb) |
 
 ### （二）部署使用
 **请尽量使用python >= 3.10**
