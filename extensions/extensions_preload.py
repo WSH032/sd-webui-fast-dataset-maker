@@ -1,9 +1,12 @@
+"""
+插件不应依赖于modules.cmd_args中的参数
+插件所需的全部参数应该在这里注册
+将会在modules.shared中被调用
+"""
+
 import argparse
 import logging
 
-# 插件不应依赖于modules.cmd_args中的参数
-# 插件所需的全部参数应该在这里注册
-# 将会在modules.shared中被调用
 
 def preload_sd_webui_infinite_image_browsing(parser: argparse.ArgumentParser) -> None:
 
@@ -36,6 +39,7 @@ def preload_Gelbooru_API_Downloader(parser: argparse.ArgumentParser) -> None:
 
 
 # 注册的扩展名字列表
+# 从逻辑功能上来说，键名可以不和文件夹同名；但是为了统一，请保证与文件夹同名
 registered_extensions_preload = {
     "dataset_tag_editor_standalone": preload_dataset_tag_editor_standalone,
     "image_deduplicate_cluster_webui": preload_image_deduplicate_cluster_webui,

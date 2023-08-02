@@ -1,24 +1,29 @@
 import os
 from typing import Callable
 
-extensions_dir = os.path.dirname( os.path.abspath(__file__) )
+
+EXTENSIONS_DIR = os.path.dirname( os.path.abspath(__file__) )  # extensions文件夹路径
+
 
 def webpath(path: str) -> str:
     """将path转为webpath，会带上修改时间戳"""
     html_path = path.replace('\\', '/')
     return f'file={html_path}?{os.path.getmtime(path)}'
 
+
 def javascript_html(js_path: str) -> str:
-    """将js文件转为html字符串"""
+    """将js文件转为html字符串，末尾自带换行符"""
     head = ""
     head += f'<script type="text/javascript" src="{webpath(js_path)}"></script>\n'
     return head
 
+
 def css_html(css_path: str) -> str:
-    """将css文件转为html字符串"""
+    """将css文件转为html字符串，末尾不带换行符"""
     head = ""
     head += f'<link rel="stylesheet" property="stylesheet" href="{webpath(css_path)}">'
     return head
+
 
 def dir_path2html(dir: str, ext: str, html_func: Callable[[str], str]) -> str:
     """
