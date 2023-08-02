@@ -45,6 +45,20 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
 遇到问题可以在[Github上提issue ❓](https://github.com/WSH032/sd-webui-fast-dataset-maker/issues)
 
 
+## Change History
+
+### V 1.1.0 - future
+03 Aug.2023 2023/08/03
+#### New Features:
+- No changes to highlight.
+
+#### Other Changes:
+- 只有在载入某个扩展时，才会临时修改sys.path，以防止载入各扩展时的潜在冲突
+
+#### Bug Fixes:
+- 载入扩展时的import将使用其所在文件夹做为顶级包
+  - 将修复此问题：载入图库扩展时导入的包，与其内部导入的包内存指向不同
+
 ## 更新 Update
 部署使用时更新方式：
 

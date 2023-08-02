@@ -185,7 +185,8 @@ if __name__ == "__main__":
     cmd_opts = webui_utils.shared.cmd_opts
     cmd_opts_dict = vars(cmd_opts)
 
-    # 请采用硬编码，以检查是否cmd_args发生变化
+    # 请使用[]而不是get，以检查是否cmd_args发生变化
+    # TODO: 修改这里和modules.cmd_args成软编码
     def demo_queue():
         concurrency_count = cmd_opts_dict["concurrency_count"]
         if cmd_opts_dict["enable_queue"] or isinstance(concurrency_count, int):

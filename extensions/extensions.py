@@ -1,31 +1,33 @@
 import os
 import logging
-from typing import Dict, Callable, List
-import sys
+from typing import Dict
 from collections import OrderedDict
 
-
-from  extensions.extensions_tools import extensions_dir
+from extensions.extensions_tools import EXTENSIONS_DIR
 from extensions.extensions_ui import (
     ui_dataset_tag_editor_standalone,
     ui_image_deduplicate_cluster_webui,
     ui_sd_webui_infinite_image_browsing,
     ui_Gelbooru_API_Downloader,
+    UiCallbackAlias,
 )
 
 
 # 注册的扩展名字列表，键名请保证与文件夹同名
-registered_extensions = OrderedDict(
+# 调整该顺序可以调整扩展tab在WebUI中的顺序
+registered_extensions: OrderedDict[str, UiCallbackAlias] = OrderedDict(
     sd_webui_infinite_image_browsing = ui_sd_webui_infinite_image_browsing,
     image_deduplicate_cluster_webui = ui_image_deduplicate_cluster_webui,
     dataset_tag_editor_standalone = ui_dataset_tag_editor_standalone,
     Gelbooru_API_Downloader = ui_Gelbooru_API_Downloader,
 )
 
-def disable_extensions(registered_extensions: Dict[str, Callable], cmd_opts_dict: dict) -> Dict[str, Callable]:
+
+def disable_extensions(registered_extensions: Dict[str, UiCallbackAlias], cmd_opts_dict: dict) -> Dict[str, UiCallbackAlias]:
     """禁用扩展"""
     # 请保证所 pop 的键名与 registered_extensions 中的键名相同
-    # 用硬编码以保证当 extensions_preload 或者 registered_extensions键名发生更改时候引发错误
+    # 用[]而不是get，以保证当 extensions_preload 或者 registered_extensions键名发生更改时候引发错误
+    # TODO: 修改这里和modules.cmd_args成软编码
     if cmd_opts_dict["disable_image_browsing"]:
         registered_extensions.pop("sd_webui_infinite_image_browsing")
     if cmd_opts_dict["disable_deduplicate_cluster"]:
@@ -38,9 +40,9 @@ def disable_extensions(registered_extensions: Dict[str, Callable], cmd_opts_dict
     return registered_extensions
 
 
-def check_extensions(registered_extensions: Dict[str, Callable]) -> Dict[str, Callable]:
+def check_extensions(registered_extensions: Dict[str, UiCallbackAlias]) -> Dict[str, UiCallbackAlias]:
     """检查是否扩展都存在"""
-    extensions_dir_list = os.listdir(extensions_dir)
+    extensions_dir_list = os.listdir(EXTENSIONS_DIR)
     not_exist_extensions_list = []
 
     # 获取字典的所有键名
@@ -61,18 +63,3 @@ def check_extensions(registered_extensions: Dict[str, Callable]) -> Dict[str, Ca
         logging.error(f"以下扩展不存在于extensions文件夹中，将不会被载入：{not_exist_extensions_list}")
     
     return registered_extensions
-
-# TODO: 最好是调用某个扩展的时候再修改相应的sys.path，而不是一次性修改全部
-def sys_path_for_extensions() -> List[str]:
-    """将每个扩展的所在的文件夹添加到sys.path中，以便各扩展可以正常import
-
-    Returns:
-        List[str]: 改变之前的sys.path.copy()
-    """
-    sys_path = sys.path.copy()
-
-    for extension in registered_extensions:
-        # 让扩展在前面
-        sys.path = [os.path.join(extensions_dir, extension)] + sys.path
-    
-    return sys_path
