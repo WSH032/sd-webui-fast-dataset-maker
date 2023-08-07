@@ -7,7 +7,7 @@
   - 如果有，请修改本项目的`requirements.txt`文件
 - 检查子扩展的`UI`组件部分是否更新
   - 如果有，请修改`extensions/extensions_ui.py`
-- 检查子扩展的`preload`部分或者`preload.py`是否更新
+- 检查子扩展的`preload`命令行参数部分或者`preload.py`是否更新
   - 如果有，请修改`extensions/extensions_preload.py`
 - 检查子扩展的`style.css`文件是否改名或移动位置；检查`js`文件是否仍在原先的`javascript`文件夹下；特别是`dataset-tag-editor-standalone`扩展
   - 如果发生改变，请修改`extensions/extensions_ui.py`中的`css_str`和`js_str`
