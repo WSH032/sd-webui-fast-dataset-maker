@@ -5,7 +5,6 @@
 """
 
 import argparse
-import logging
 
 
 def preload_sd_webui_infinite_image_browsing(parser: argparse.ArgumentParser) -> None:
@@ -18,10 +17,6 @@ def preload_sd_webui_infinite_image_browsing(parser: argparse.ArgumentParser) ->
 
 def preload_image_deduplicate_cluster_webui(parser: argparse.ArgumentParser) -> None:
 
-    try:
-        import extensions.image_deduplicate_cluster_webui.preload  # noqa: F401 # 这个只需要被导入就行了，导入时会自行执行某些操作
-    except Exception as e:
-        logging.warning(f"Failed to import extensions.image_deduplicate_cluster_webui.preload: {e}")
     parser.add_argument("--disable_deduplicate_cluster", default=False, action="store_true", help="Disable image_deduplicate_cluster_webui")
 
 

@@ -11,6 +11,8 @@ TODO:
     所以后一个扩展不会再次进行import，而是错误地使用了前一个子扩展的包
         可能的解决方法是每载入完一个子模块，就恢复sys.modules
         (！但是这会导致官方和第三方模块被重新导入，而导致在子扩展中内存地址不同！)
+
+        推荐的解决方法是各个扩展使用包含其项目特殊名字的包名，以此避免冲突
 """
 
 
@@ -81,18 +83,20 @@ def ui_image_deduplicate_cluster_webui(extension_name: str) -> UiCallbackReturnA
     """
     import cluster_images
     import deduplicate_images
+    from img_dedup_clust.tools.js import BaseJS
 
-    # 请尽量保持和原作者一致
-    title = "Deduplicate-Cluster-Image"  # 显示在SD-WebUI中的名字
-    elem_id = "Deduplicate-Cluster-Image"  # htlm id
+    # 起到全局修改效果，用A1111_WebUI提供的gradioApp()代替documnet
+    BaseJS.set_cls_attr(is_a1111_webui=True)
 
-    def create_demo():
-        with gr.Blocks() as demo:
-            with gr.TabItem("Deduplicate Images"):
-                deduplicate_images.demo.render()
-            with gr.TabItem("Cluster Images"):
-                cluster_images.demo.render()
-        return demo	
+    def deduplicate_images_ui_tab():
+        return (deduplicate_images.create_ui(), deduplicate_images.title, deduplicate_images.title)
+
+    def cluster_images_ui_tab():
+        return (cluster_images.create_ui(), cluster_images.title, cluster_images.title)
+
+    def on_ui_tabs() -> UiTabsCallbackReturnAlias:
+        """注意，此函数要求能在 sys.path 已经被还原的情况下正常调用"""
+        return [cluster_images_ui_tab(), deduplicate_images_ui_tab()]
 
     js_str = ""
 
@@ -100,10 +104,6 @@ def ui_image_deduplicate_cluster_webui(extension_name: str) -> UiCallbackReturnA
     css_path = os.path.join(EXTENSIONS_DIR, extension_name, "style.css")  # css文件应该在的位置
     if check_if_path_exists(css_path, name=extension_name, path_name="css"):
         css_str += css_html(css_path) 
-
-    def on_ui_tabs() -> UiTabsCallbackReturnAlias:
-        """注意， 此函数要求能在 sys.path 已经被还原的情况下正常调用"""
-        return [(create_demo(), title, elem_id)]
 
     return on_ui_tabs, None, js_str, css_str
 
@@ -310,10 +310,11 @@ def ui_Gelbooru_API_Downloader(extension_name: str) -> UiCallbackReturnAlias:
 
     def not_implemented_error():
         extension_name = "Gelbooru_API_Downloader"
-        print(f"NotImplementedError: {extension_name}的WebUI界面尚未实现")
+        info = f"NotImplemented: {extension_name}的WebUI界面尚未实现"
         download_ps1_path = os.path.join(EXTENSIONS_DIR, extension_name, "run_download_images_coroutine.ps1")
         if os.path.exists(download_ps1_path):
-            print(f"如果要使用下载功能，请使用:\n{download_ps1_path}")
+            info = info + f"，如果要使用下载功能，请使用: {download_ps1_path}"
+        print(info)
     not_implemented_error()
-    
+
     return None, None, "", ""

@@ -48,16 +48,17 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
 ## Change History
 
 ### V 1.1.0 - future
-03 Aug.2023 2023/08/03
+07 Aug.2023 2023/08/07
 #### New Features:
-- No changes to highlight.
+- Bump `image-deduplicate-cluster-webui` version to 2.0.1
+  - refer to [v2.0.1#change-history](https://github.com/WSH032/image-deduplicate-cluster-webui/tree/v2.0.1#change-history)
 
 #### Other Changes:
 - 只有在载入某个扩展时，才会临时修改sys.path，以防止载入各扩展时的潜在冲突
 
 #### Bug Fixes:
 - 载入扩展时的import将使用其所在文件夹做为顶级包
-  - 将修复此问题：载入图库扩展时导入的包，与其内部导入的包内存指向不同
+  - 将修复：载入图库扩展时导入的包，与其内部导入的包的命名空间指向不同
 
 ## 更新 Update
 部署使用时更新方式：
