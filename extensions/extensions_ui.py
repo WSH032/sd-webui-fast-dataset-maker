@@ -1,5 +1,6 @@
 """
 此模块负责各扩展的载入
+所需要的命令行参数在extensions.extensions_preload中注册，在shared.cmd_opts中获取值
 
 TODO:
 为了保证载入各子扩展时导入的包和子扩展内部导入的包指向同样的内存地址
@@ -122,7 +123,7 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
     from PIL import Image
 
     from scripts.iib.api import send_img_path
-    from scripts.iib.tool import locale, read_info_from_image
+    from scripts.iib.tool import locale, read_sd_webui_gen_info_from_image
     from scripts.iib.logger import logger
     from app import AppUtils
     
@@ -145,10 +146,10 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
             if not path:
                 raise ValueError("path is None or empty")
             img = Image.open(path)
-            info = read_info_from_image(img)
+            info = read_sd_webui_gen_info_from_image(img)
             return img, info
         except Exception as e:
-            logger.exception("img_update_func %s",e)
+            logger.exception("img_update_func err %s",e)
             return gr.update(), gr.update()  # 不更新
     
     def not_implemented_error():
@@ -161,6 +162,7 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
     def create_demo():
         """ ！！！注意，所有的elem_id都不要改，js依靠这些id来操作！！！ """
         with gr.Blocks(analytics_enabled=False) as demo:
+            gr.HTML("", elem_id="iib_top")
             gr.HTML("error", elem_id="infinite_image_browsing_container_wrapper")
             # 以下是使用2个组件模拟粘贴过程
             img = gr.Image(
@@ -209,6 +211,10 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
             sd_webui_config = shared.cmd_opts.sd_webui_config,
             update_image_index = shared.cmd_opts.update_image_index,
             extra_paths = shared.cmd_opts.extra_paths,
+            sd_webui_path_relative_to_config = shared.cmd_opts.sd_webui_path_relative_to_config,
+            allow_cors = shared.cmd_opts.allow_cors,
+            enable_shutdown = shared.cmd_opts.enable_shutdown,
+            sd_webui_dir = shared.cmd_opts.sd_webui_dir,
         )
         app_utils.wrap_app(app)
 

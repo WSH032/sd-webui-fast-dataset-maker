@@ -34,3 +34,4 @@ fastapi
 uvicorn
 piexif
 python-dotenv
+pyfunctional

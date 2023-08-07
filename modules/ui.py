@@ -132,11 +132,12 @@ def create_ui() -> Tuple[gr.Blocks, List[AppStartedCallbackAlias]]:
         # on_ui_tabs 在设计上已经被要求为可以在sys.path被还原时正常工作，所以不用担心
         interfaces_tuple_list += on_ui_tabs() or []
 
+    # 请保证id, elem_id, 和A1111-WebUI的生成一样
     with gr.Blocks() as demo:
         print("开始渲染UI")
-        for interface, label, ifid in interfaces_tuple_list:
-            # 请保证id, elem_id, 和A1111-WebUI的生成一样
-            with gr.Tab(label, id=ifid, elem_id=f"tab_{ifid}"):
-                interface.render()
+        with gr.Tabs(elem_id="tabs"):
+            for interface, label, ifid in interfaces_tuple_list:
+                with gr.Tab(label, id=ifid, elem_id=f"tab_{ifid}"):
+                    interface.render()
 
     return demo, callbacks_app_started

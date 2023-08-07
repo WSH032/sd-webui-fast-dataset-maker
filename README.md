@@ -50,8 +50,10 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
 ### V 1.1.0 - future
 07 Aug.2023 2023/08/07
 #### New Features:
-- Bump `image-deduplicate-cluster-webui` version to 2.0.1
+- Bump `image-deduplicate-cluster-webui` version to [`2.0.1`](https://github.com/WSH032/image-deduplicate-cluster-webui/tree/v2.0.1)
   - refer to [v2.0.1#change-history](https://github.com/WSH032/image-deduplicate-cluster-webui/tree/v2.0.1#change-history)
+- Bump `sd-webui-infinite-image-browsing` version to 2023-8-4 [`fc1853c`](https://github.com/zanllp/sd-webui-infinite-image-browsing/tree/fc1853c1476324fa082a57d4e2e480e425bb7c7b)
+  - refer to [Change-log 2023-7-30](https://github.com/zanllp/sd-webui-infinite-image-browsing/wiki/Change-log)
 
 #### Other Changes:
 - 只有在载入某个扩展时，才会临时修改sys.path，以防止载入各扩展时的潜在冲突
