@@ -47,17 +47,28 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
 
 ## Change History
 
-### V 1.1.0 - future
-03 Aug.2023 2023/08/03
+### V 1.1.0
+08 Aug.2023 2023/08/08
 #### New Features:
-- No changes to highlight.
+- Bump `image-deduplicate-cluster-webui` version to [`2.0.1`](https://github.com/WSH032/image-deduplicate-cluster-webui/tree/v2.0.1)
+  - refer to [v2.0.1#change-history](https://github.com/WSH032/image-deduplicate-cluster-webui/tree/v2.0.1#change-history)
+- Bump `sd-webui-infinite-image-browsing` version to 2023-8-4 [`fc1853c`](https://github.com/zanllp/sd-webui-infinite-image-browsing/tree/fc1853c1476324fa082a57d4e2e480e425bb7c7b)
+  - refer to [Change-log 2023-7-30](https://github.com/zanllp/sd-webui-infinite-image-browsing/wiki/Change-log)
+- Bump `dataset-tag-editor-standalone` version to 2023-8-8 [`2569280`](https://github.com/WSH032/dataset-tag-editor-standalone/tree/25692806ad64afe55b8c1eebfebc071a5529d9b5)
+  - 默认启用512分辨率缩略图
+- Update Colab Notebook
+  - 更新Colab notebook以匹配新版本
 
 #### Other Changes:
 - 只有在载入某个扩展时，才会临时修改sys.path，以防止载入各扩展时的潜在冲突
+- 添加`weibui.WebuiUtils._reload_script_modules`以供在Jupyter中使用时，重新载入、更新包与模块
+  - 实验性功能，未进行测试，可能会在未来版本中修改或移除
+  - 如果可行，建议直接依靠重启Jupyter内核来重新载入、更新包与模块
 
 #### Bug Fixes:
 - 载入扩展时的import将使用其所在文件夹做为顶级包
-  - 将修复此问题：载入图库扩展时导入的包，与其内部导入的包内存指向不同
+  - 将修复：载入图库扩展时导入的包，与其内部导入的包的命名空间指向不同
+- 修复在Jupyter中多次重复运行时，错误修改`gradio.routes.templates.TemplateResponse`而造成的`<script scr>`标签重复及顺序错误的问题
 
 ## 更新 Update
 部署使用时更新方式：
@@ -95,16 +106,16 @@ git clone https://github.com/WSH032/sd-webui-fast-dataset-maker.git --recurse-su
 - Window用户可以运行 `install.ps1` 安装依赖
 - Linux用户请自行通过 `pip install -r requirements.txt` 安装依赖
 
-```
-对于通过 `requirements.txt` 安装的用户请注意
-如果你在使用WD14生成tag的时候想使用GPU加速
-请打开 `requirements.txt` 修改安装 torch=2.0.0 + cuda118
+```shell
+# 对于通过 `requirements.txt` 安装的用户请注意
+# 如果你想使用 Torch Cuda 或者 GPU 进行加速
+# 请打开 `requirements.txt` 修改安装 torch=2.0.0 + cuda118
 
 # If you want to install with CUDA, please use the following command:
 
-# --extra-index-url https://download.pytorch.org/whl/cu118
-# torch==2.0.0+cu118
-# torchvision==0.15.1+cu118
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch==2.0.0+cu118
+torchvision==0.15.1+cu118
 ```
 #### 注意
 > 此WebUI使用了Gradio非官方文档的操作方法，并在 `gradio <=3.35.2, >=3.29.0` 进行了测试，但不保证未来Gradio官方不会修改相应接口
@@ -126,9 +137,21 @@ git clone https://github.com/WSH032/sd-webui-fast-dataset-maker.git --recurse-su
 
 ## 部署使用 - 使用方法
 
+### **注意**：
+**`dataset-tag-editor-standalone`扩展，在以原图方式，处理超过50张图片时候，会消耗巨大内存和时间，并且可能会出现图片过滤器不工作的情况**
+- 610张，总占用1.33G的图片；以512分辨率运行，耗时100s处理完毕
+- 本项目在`v1.1.0`更新中，已经默认为`dataset-tag-editor-standalone`设置启用512分辨率缩略图
+- 如果你需要更少的内存和更快的速度，可以自行调低分辨率；或者你也可以自行调高分辨率，用更长的处理时间换取更清晰的图片（不建议，因为512基本够用）
+
+![setting_resolution](https://github.com/WSH032/sd-webui-fast-dataset-maker/assets/126865849/a4780903-9b41-46db-9a0f-e740b60e57cf)
+
+---
+
 Please refer to the original author's repository for the specific usage of each extension
 
 各插件具体的使用方法请查看原作者仓库自述文件，这里不再重复
+
+---
 
 ### （一） 新手 请运行 `run_webui.ps1`
 

@@ -25,15 +25,13 @@ aiofiles == 23.1.0
 toml == 0.10.2
 imagededup == 0.3.2
 scikit-learn == 1.2.2
-tensorflow <2.11, >=2.10.1
 huggingface_hub == 0.15.1
 opencv-python <= 4.7.0.72, >=4.7.0.68
-onnx == 1.12.0
 onnxruntime-gpu == 1.15.1
-tf2onnx == 1.14.0
 
 # for sd-webui-infinite-image-browsing #
 fastapi <= 0.98.0, >= 0.97.0
 uvicorn == 0.22.0
 piexif ==  1.1.3
 python-dotenv == 1.0.0
+pyfunctional == 1.4.3

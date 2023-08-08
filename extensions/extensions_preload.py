@@ -5,23 +5,22 @@
 """
 
 import argparse
-import logging
 
 
 def preload_sd_webui_infinite_image_browsing(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument("--sd_webui_config", type=str, default=None, help="The path to the config file")
-    parser.add_argument("--update_image_index", action="store_true", help="Update the image index")
-    parser.add_argument("--extra_paths", nargs="+", help="Extra paths to use, will be added to Quick Move.", default=[])
+    parser.add_argument("--update_image_index", default=False, action="store_true", help="Update the image index")
+    parser.add_argument("--extra_paths", default=[], nargs="+", help="Extra paths to use, will be added to Quick Move.")
     parser.add_argument("--disable_image_browsing", default=False, action="store_true", help="Disable sd_webui_infinite_image_browsing")
+    parser.add_argument("--sd_webui_path_relative_to_config", default=False, action="store_true", help="Use the file path of the sd_webui_config file as the base for all relative paths provided within the sd_webui_config file.")
+    parser.add_argument("--allow_cors", default=False, action="store_true", help="Allow Cross-Origin Resource Sharing (CORS) for the API.")
+    parser.add_argument("--enable_shutdown", default=False, action="store_true", help="Enable the shutdown endpoint.",)
+    parser.add_argument("--sd_webui_dir", type=str, default=None, help="The path to the sd_webui folder. When specified, the sd_webui's configuration will be used and the extension must be installed within the sd_webui. Data will be shared between the two.",)
 
 
 def preload_image_deduplicate_cluster_webui(parser: argparse.ArgumentParser) -> None:
 
-    try:
-        import extensions.image_deduplicate_cluster_webui.preload  # noqa: F401 # 这个只需要被导入就行了，导入时会自行执行某些操作
-    except Exception as e:
-        logging.warning(f"Failed to import extensions.image_deduplicate_cluster_webui.preload: {e}")
     parser.add_argument("--disable_deduplicate_cluster", default=False, action="store_true", help="Disable image_deduplicate_cluster_webui")
 
 

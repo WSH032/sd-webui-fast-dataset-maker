@@ -1,5 +1,6 @@
 """
 此模块负责各扩展的载入
+所需要的命令行参数在extensions.extensions_preload中注册，在shared.cmd_opts中获取值
 
 TODO:
 为了保证载入各子扩展时导入的包和子扩展内部导入的包指向同样的内存地址
@@ -11,6 +12,8 @@ TODO:
     所以后一个扩展不会再次进行import，而是错误地使用了前一个子扩展的包
         可能的解决方法是每载入完一个子模块，就恢复sys.modules
         (！但是这会导致官方和第三方模块被重新导入，而导致在子扩展中内存地址不同！)
+
+        推荐的解决方法是各个扩展使用包含其项目特殊名字的包名，以此避免冲突
 """
 
 
@@ -81,18 +84,20 @@ def ui_image_deduplicate_cluster_webui(extension_name: str) -> UiCallbackReturnA
     """
     import cluster_images
     import deduplicate_images
+    from img_dedup_clust.tools.js import BaseJS
 
-    # 请尽量保持和原作者一致
-    title = "Deduplicate-Cluster-Image"  # 显示在SD-WebUI中的名字
-    elem_id = "Deduplicate-Cluster-Image"  # htlm id
+    # 起到全局修改效果，用A1111_WebUI提供的gradioApp()代替documnet
+    BaseJS.set_cls_attr(is_a1111_webui=True)
 
-    def create_demo():
-        with gr.Blocks() as demo:
-            with gr.TabItem("Deduplicate Images"):
-                deduplicate_images.demo.render()
-            with gr.TabItem("Cluster Images"):
-                cluster_images.demo.render()
-        return demo	
+    def deduplicate_images_ui_tab():
+        return (deduplicate_images.create_ui(), deduplicate_images.title, deduplicate_images.title)
+
+    def cluster_images_ui_tab():
+        return (cluster_images.create_ui(), cluster_images.title, cluster_images.title)
+
+    def on_ui_tabs() -> UiTabsCallbackReturnAlias:
+        """注意，此函数要求能在 sys.path 已经被还原的情况下正常调用"""
+        return [cluster_images_ui_tab(), deduplicate_images_ui_tab()]
 
     js_str = ""
 
@@ -100,10 +105,6 @@ def ui_image_deduplicate_cluster_webui(extension_name: str) -> UiCallbackReturnA
     css_path = os.path.join(EXTENSIONS_DIR, extension_name, "style.css")  # css文件应该在的位置
     if check_if_path_exists(css_path, name=extension_name, path_name="css"):
         css_str += css_html(css_path) 
-
-    def on_ui_tabs() -> UiTabsCallbackReturnAlias:
-        """注意， 此函数要求能在 sys.path 已经被还原的情况下正常调用"""
-        return [(create_demo(), title, elem_id)]
 
     return on_ui_tabs, None, js_str, css_str
 
@@ -122,7 +123,7 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
     from PIL import Image
 
     from scripts.iib.api import send_img_path
-    from scripts.iib.tool import locale, read_info_from_image
+    from scripts.iib.tool import locale, read_sd_webui_gen_info_from_image
     from scripts.iib.logger import logger
     from app import AppUtils
     
@@ -145,10 +146,10 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
             if not path:
                 raise ValueError("path is None or empty")
             img = Image.open(path)
-            info = read_info_from_image(img)
+            info = read_sd_webui_gen_info_from_image(img)
             return img, info
         except Exception as e:
-            logger.exception("img_update_func %s",e)
+            logger.exception("img_update_func err %s",e)
             return gr.update(), gr.update()  # 不更新
     
     def not_implemented_error():
@@ -161,6 +162,7 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
     def create_demo():
         """ ！！！注意，所有的elem_id都不要改，js依靠这些id来操作！！！ """
         with gr.Blocks(analytics_enabled=False) as demo:
+            gr.HTML("", elem_id="iib_top")
             gr.HTML("error", elem_id="infinite_image_browsing_container_wrapper")
             # 以下是使用2个组件模拟粘贴过程
             img = gr.Image(
@@ -209,6 +211,10 @@ def ui_sd_webui_infinite_image_browsing(extension_name: str) -> UiCallbackReturn
             sd_webui_config = shared.cmd_opts.sd_webui_config,
             update_image_index = shared.cmd_opts.update_image_index,
             extra_paths = shared.cmd_opts.extra_paths,
+            sd_webui_path_relative_to_config = shared.cmd_opts.sd_webui_path_relative_to_config,
+            allow_cors = shared.cmd_opts.allow_cors,
+            enable_shutdown = shared.cmd_opts.enable_shutdown,
+            sd_webui_dir = shared.cmd_opts.sd_webui_dir,
         )
         app_utils.wrap_app(app)
 
@@ -310,10 +316,11 @@ def ui_Gelbooru_API_Downloader(extension_name: str) -> UiCallbackReturnAlias:
 
     def not_implemented_error():
         extension_name = "Gelbooru_API_Downloader"
-        print(f"NotImplementedError: {extension_name}的WebUI界面尚未实现")
+        info = f"NotImplemented: {extension_name}的WebUI界面尚未实现"
         download_ps1_path = os.path.join(EXTENSIONS_DIR, extension_name, "run_download_images_coroutine.ps1")
         if os.path.exists(download_ps1_path):
-            print(f"如果要使用下载功能，请使用:\n{download_ps1_path}")
+            info = info + f"，如果要使用下载功能，请使用: {download_ps1_path}"
+        print(info)
     not_implemented_error()
-    
+
     return None, None, "", ""

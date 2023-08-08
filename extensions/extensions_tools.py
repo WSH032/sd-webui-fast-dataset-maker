@@ -38,7 +38,7 @@ def dir_path2html(dir: str, ext: str, html_func: Callable[[str], str]) -> str:
     # 该文件夹内所有js文件
     js_files_list = [
         os.path.join(dir, f)
-        for f in os.listdir(dir)
+        for f in sorted(os.listdir(dir))  # 请进行排序，因为对于js文件有执行顺序要求，tag_editor通过文件名指定执行顺序
         if f.endswith(ext) and os.path.isfile(os.path.join(dir, f))
     ]
     # 转为绝对路径
