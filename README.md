@@ -48,7 +48,7 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
 ## Change History
 
 ### V 1.1.0
-07 Aug.2023 2023/08/07
+08 Aug.2023 2023/08/08
 #### New Features:
 - Bump `image-deduplicate-cluster-webui` version to [`2.0.1`](https://github.com/WSH032/image-deduplicate-cluster-webui/tree/v2.0.1)
   - refer to [v2.0.1#change-history](https://github.com/WSH032/image-deduplicate-cluster-webui/tree/v2.0.1#change-history)
@@ -56,12 +56,17 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
   - refer to [Change-log 2023-7-30](https://github.com/zanllp/sd-webui-infinite-image-browsing/wiki/Change-log)
 - Bump `dataset-tag-editor-standalone` version to 2023-8-8 [`2569280`](https://github.com/WSH032/dataset-tag-editor-standalone/tree/25692806ad64afe55b8c1eebfebc071a5529d9b5)
   - 默认启用512分辨率缩略图
+
 #### Other Changes:
 - 只有在载入某个扩展时，才会临时修改sys.path，以防止载入各扩展时的潜在冲突
+- 添加`weibui.WebuiUtils._reload_script_modules`以供在Jupyter中使用时，重新载入、更新包与模块
+  - 实验性功能，未进行测试，可能会在未来版本中修改或移除
+  - 如果可行，建议直接依靠重启Jupyter内核来重新载入、更新包与模块
 
 #### Bug Fixes:
 - 载入扩展时的import将使用其所在文件夹做为顶级包
   - 将修复：载入图库扩展时导入的包，与其内部导入的包的命名空间指向不同
+- 修复在Jupyter中多次重复运行时，错误修改`gradio.routes.templates.TemplateResponse`而造成的`<script scr>`标签重复及顺序错误的问题
 
 ## 更新 Update
 部署使用时更新方式：

@@ -4,7 +4,7 @@
 
 ### 1.基础检查
 - 检查子扩展的`requirements.txt`或者`install.py`是否有更新
-  - 如果有，请修改本项目的`requirements.txt`文件
+  - 如果有，请修改本项目的`requirements.txt`和`requirements_versions.txt`文件
 - 检查子扩展的`UI`组件部分是否更新
   - 如果有，请修改`extensions/extensions_ui.py`
 - 检查子扩展的`preload`命令行参数部分或者`preload.py`是否更新

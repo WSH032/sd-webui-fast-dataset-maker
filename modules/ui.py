@@ -24,11 +24,16 @@ from extensions.extensions_tools import (
 )
 
 
-#################### 全局变量 ####################
+#################### 常量 ####################
 
-recover_sys_path = True  # 是否恢复sys.path
+# 先做一次判断，只储存最原始的gradio.routes.templates.TemplateResponse
+# 这是因为weibui.WebuiUtils._reload_script_modules可能会重载此模块
+# 如果重载后再进行赋值，则此时会错误储存被reload_javascript修改的TemplateResponse
+if "GradioTemplateResponseOriginal" not in globals():
+    GradioTemplateResponseOriginal = routes.templates.TemplateResponse  # 备份一下，禁止修改这个变量
 
-GradioTemplateResponseOriginal = routes.templates.TemplateResponse  # 备份一下，因为一会要修改
+if "recover_sys_path" not in globals():
+    recover_sys_path = True  # 是否恢复sys.path
 
 
 #################### 工具 ####################
@@ -63,15 +68,18 @@ class TempSysPath(AbstractContextManager):
                 sys.path.remove(self._path)  # 只是尝试删除
 
 
-def reload_javascript(GradioTemplateResponseOriginal: Callable, js: str, css: str):
+def reload_javascript(js: str, css: str) -> Callable:
 
     def template_response(*args, **kwargs):
+
+        assert GradioTemplateResponseOriginal  # make pylance happy # pylance无法判断if "GradioTemplateResponseOriginal" not in globals()
+
         res = GradioTemplateResponseOriginal(*args, **kwargs)
         res.body = res.body.replace(b'</head>', f'{js}</head>'.encode("utf8"))
         res.body = res.body.replace(b'</body>', f'{css}</body>'.encode("utf8"))
         res.init_headers()
         return res
-    
+
     return template_response
 
 
@@ -120,7 +128,6 @@ def create_ui() -> Tuple[gr.Blocks, List[AppStartedCallbackAlias]]:
 
     # 先修改gradio，再创建demo，像SD-WebUI那样
     routes.templates.TemplateResponse  = reload_javascript(
-        routes.templates.TemplateResponse,
         js = js_str,
         css = css_str
     )
