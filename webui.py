@@ -1,5 +1,6 @@
 import os
 import sys
+import importlib
 from typing import Tuple, List, Callable
 
 import gradio as gr
@@ -12,11 +13,11 @@ sys_path = sys.path.copy()  # 备份
 class WebuiUtils(object):
 
     def __init__(
-            self,
-            cmd: bool=False,
-            help: bool = False,
-            **kwargs
-        ) -> None:
+        self,
+        cmd: bool=False,
+        help: bool = False,
+        **kwargs
+    ) -> None:
         """初始化modules.shared.cmd_opts，用于设置各插件参数
 
         Args:
@@ -48,7 +49,7 @@ class WebuiUtils(object):
             如果不需要恢复sys.path，可以在实例化后， modules.ui.recover_sys_path = False
         """
 
-        # 必须在 modules.ui 之前，将会修改cmd_opts
+        # 必须在import modules.ui 之前调用modules.shared.set_opts，将会修改cmd_opts
         import modules.shared
 
         self.demo = None
@@ -143,7 +144,8 @@ class WebuiUtils(object):
         # 要实现的话需要在这里import dataset_tag_editor，这样会导致耦合严重
 
         def block_thread():
-            
+            """modified from https://github.com/gradio-app/gradio/blob/74d235697d89825d0df203a7082c93a2612a65f2/gradio/blocks.py#L1968C1-L1978C1"""
+
             # Block main thread if running in a script to stop script from exiting
             is_in_interactive_mode = bool(getattr(sys, "ps1", sys.flags.interactive))
 
@@ -171,6 +173,31 @@ class WebuiUtils(object):
         if self.demo is not None:
             self.demo.close()
 
+    @staticmethod
+    def _reload_script_modules():
+        """
+        实验性功能，用于重载modules和extensions中的所有模块
+        主要用于开发时候，修改了modules或者extensions中的模块，但是不想重启jupyter notebook
+        重载的顺序是import时候的顺序
+
+        注意，无法重载子扩展中的模块，因为子扩展的模块不存在于modules或者extensions包中
+        """        
+
+        # 在这里import而不是在文件顶部，这样可以起到实时更新的作用
+        import modules.modules_tools
+        import extensions.extensions_tools
+        MODULES_DIR_name = os.path.basename( modules.modules_tools.MODULES_DIR )
+        EXTENSIONS_DIR_name = os.path.basename( extensions.extensions_tools.EXTENSIONS_DIR )
+
+        # 重载MODULES_DIR和EXTENSIONS_DIR中的所有模块
+        for module in [
+            module
+            for name, module in sys.modules.items()
+            if name.startswith((MODULES_DIR_name, EXTENSIONS_DIR_name))
+        ]:
+            importlib.reload(module)
+
+
 
 
 if __name__ == "__main__":
@@ -185,7 +212,8 @@ if __name__ == "__main__":
     cmd_opts = webui_utils.shared.cmd_opts
     cmd_opts_dict = vars(cmd_opts)
 
-    # 请采用硬编码，以检查是否cmd_args发生变化
+    # 请使用[]而不是get，以检查是否cmd_args发生变化
+    # TODO: 修改这里和modules.cmd_args成软编码
     def demo_queue():
         concurrency_count = cmd_opts_dict["concurrency_count"]
         if cmd_opts_dict["enable_queue"] or isinstance(concurrency_count, int):

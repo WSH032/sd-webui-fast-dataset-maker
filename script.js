@@ -1,4 +1,9 @@
-// 为扩展的js提供支持
+/*
+modified from https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/68f336bd994bed5442ad95bad6b6ad5564a5409a/script.js
+删去了optionsChangedCallbacks部分
+调整了executeCallbacks(uiLoadedCallbacks)逻辑判断部分
+*/
+
 function gradioApp() {
     const elems = document.getElementsByTagName('gradio-app');
     const elem = elems.length == 0 ? document : elems[0];
@@ -9,4 +14,153 @@ function gradioApp() {
         };
     }
     return elem.shadowRoot ? elem.shadowRoot : elem;
+}
+
+/**
+ * Get the currently selected top-level UI tab button (e.g. the button that says "Extras").
+ */
+function get_uiCurrentTab() {
+    return gradioApp().querySelector('#tabs > .tab-nav > button.selected');
+}
+
+/**
+ * Get the first currently visible top-level UI tab content (e.g. the div hosting the "txt2img" UI).
+ */
+function get_uiCurrentTabContent() {
+    return gradioApp().querySelector('#tabs > .tabitem[id^=tab_]:not([style*="display: none"])');
+}
+
+var uiUpdateCallbacks = [];
+var uiAfterUpdateCallbacks = [];
+var uiLoadedCallbacks = [];
+var uiTabChangeCallbacks = [];
+var uiAfterUpdateTimeout = null;
+var uiCurrentTab = null;
+
+/**
+ * Register callback to be called at each UI update.
+ * The callback receives an array of MutationRecords as an argument.
+ */
+function onUiUpdate(callback) {
+    uiUpdateCallbacks.push(callback);
+}
+
+/**
+ * Register callback to be called soon after UI updates.
+ * The callback receives no arguments.
+ *
+ * This is preferred over `onUiUpdate` if you don't need
+ * access to the MutationRecords, as your function will
+ * not be called quite as often.
+ */
+function onAfterUiUpdate(callback) {
+    uiAfterUpdateCallbacks.push(callback);
+}
+
+/**
+ * Register callback to be called when the UI is loaded.
+ * The callback receives no arguments.
+ */
+function onUiLoaded(callback) {
+    uiLoadedCallbacks.push(callback);
+}
+
+/**
+ * Register callback to be called when the UI tab is changed.
+ * The callback receives no arguments.
+ */
+function onUiTabChange(callback) {
+    uiTabChangeCallbacks.push(callback);
+}
+
+function executeCallbacks(queue, arg) {
+    for (const callback of queue) {
+        try {
+            callback(arg);
+        } catch (e) {
+            console.error("error running callback", callback, ":", e);
+        }
+    }
+}
+
+/**
+ * Schedule the execution of the callbacks registered with onAfterUiUpdate.
+ * The callbacks are executed after a short while, unless another call to this function
+ * is made before that time. IOW, the callbacks are executed only once, even
+ * when there are multiple mutations observed.
+ */
+function scheduleAfterUiUpdateCallbacks() {
+    clearTimeout(uiAfterUpdateTimeout);
+    uiAfterUpdateTimeout = setTimeout(function() {
+        executeCallbacks(uiAfterUpdateCallbacks);
+    }, 200);
+}
+
+var executedOnLoaded = false;
+
+document.addEventListener("DOMContentLoaded", function() {
+    var mutationObserver = new MutationObserver(function(m) {
+
+        // 这个是原来的代码，但在本项目中，没有'#txt2img_prompt'这个元素，所以只能这个判断部分删掉
+        // if (!executedOnLoaded && gradioApp().querySelector('#txt2img_prompt')) {
+        //     executedOnLoaded = true;
+        //     executeCallbacks(uiLoadedCallbacks);
+        // }
+
+        if (!executedOnLoaded) {
+            executedOnLoaded = true;
+            executeCallbacks(uiLoadedCallbacks);
+        }
+
+        executeCallbacks(uiUpdateCallbacks, m);
+        scheduleAfterUiUpdateCallbacks();
+        const newTab = get_uiCurrentTab();
+        if (newTab && (newTab !== uiCurrentTab)) {
+            uiCurrentTab = newTab;
+            executeCallbacks(uiTabChangeCallbacks);
+        }
+    });
+    mutationObserver.observe(gradioApp(), {childList: true, subtree: true});
+});
+
+/**
+ * Add a ctrl+enter as a shortcut to start a generation
+ */
+document.addEventListener('keydown', function(e) {
+    var handled = false;
+    if (e.key !== undefined) {
+        if ((e.key == "Enter" && (e.metaKey || e.ctrlKey || e.altKey))) handled = true;
+    } else if (e.keyCode !== undefined) {
+        if ((e.keyCode == 13 && (e.metaKey || e.ctrlKey || e.altKey))) handled = true;
+    }
+    if (handled) {
+        var button = get_uiCurrentTabContent().querySelector('button[id$=_generate]');
+        if (button) {
+            button.click();
+        }
+        e.preventDefault();
+    }
+});
+
+/**
+ * checks that a UI element is not in another hidden element or tab content
+ */
+function uiElementIsVisible(el) {
+    if (el === document) {
+        return true;
+    }
+
+    const computedStyle = getComputedStyle(el);
+    const isVisible = computedStyle.display !== 'none';
+
+    if (!isVisible) return false;
+    return uiElementIsVisible(el.parentNode);
+}
+
+function uiElementInSight(el) {
+    const clRect = el.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    const isOnScreen = clRect.bottom > 0 && clRect.top < windowHeight;
+
+    return isOnScreen;
 }

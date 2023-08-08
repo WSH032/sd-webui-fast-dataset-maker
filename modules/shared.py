@@ -33,9 +33,10 @@ def set_opts(args_list: Optional[ List[str] ] = None, quiet: bool = False):
 # 需要调用modules.shared.set_opts()来设置cmd_opts
 cmd_opts = None
 
-try:
-    for extension_name, extension_preload in registered_extensions_preload.items():
+
+for extension_name, extension_preload in registered_extensions_preload.items():
+    try:
         extension_preload(parser)
-except Exception as e:
-    logging.exception(f"Error when loading extension_preload: {e}")
-    pass
+    except Exception as e:
+        logging.exception(f"Error when loading extension_preload of '{extension_name}': {e}")
+        pass
