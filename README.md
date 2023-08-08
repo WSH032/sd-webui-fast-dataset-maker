@@ -56,6 +56,8 @@ WebUI部分借鉴了[AUTOMATIC1111/stable-diffusion-webui](https://github.com/AU
   - refer to [Change-log 2023-7-30](https://github.com/zanllp/sd-webui-infinite-image-browsing/wiki/Change-log)
 - Bump `dataset-tag-editor-standalone` version to 2023-8-8 [`2569280`](https://github.com/WSH032/dataset-tag-editor-standalone/tree/25692806ad64afe55b8c1eebfebc071a5529d9b5)
   - 默认启用512分辨率缩略图
+- Update Colab Notebook
+  - 更新Colab notebook以匹配新版本
 
 #### Other Changes:
 - 只有在载入某个扩展时，才会临时修改sys.path，以防止载入各扩展时的潜在冲突

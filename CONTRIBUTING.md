@@ -20,7 +20,8 @@
     - 请参考[AUTOMATIC1111/stable-diffusion-webui/blob/master/script.js](https://github.com/AUTOMATIC1111/stable-diffusion-webui/blob/master/script.js)和[AUTOMATIC1111/stable-diffusion-webui/tree/master/javascript](https://github.com/AUTOMATIC1111/stable-diffusion-webui/tree/master/javascript)对`script.js`进行修改
 
 ### 3.Colab测试
-- 在Colab中更新(如有必要)`fast_dataset_maker.ipynb`并进行测试
+- 在Colab中更新`fast_dataset_maker.ipynb`并进行测试
+  - 尤其注意`git clone`的`branch`是否修改
 
 ### 4.修改`README.md`
 
